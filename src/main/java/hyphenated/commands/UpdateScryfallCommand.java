@@ -1,21 +1,16 @@
 package hyphenated.commands;
 
+import com.google.gson.*;
 import hyphenated.Config;
-import hyphenated.Rotobot;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
-import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.json.JSONArray;
-import org.json.JSONObject;
 
 import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
 public class UpdateScryfallCommand extends ListenerAdapter {
@@ -35,8 +30,9 @@ public class UpdateScryfallCommand extends ListenerAdapter {
             event.deferReply().queue();
             try {
                 long startTime = System.currentTimeMillis();
+
                 URL scryfallEndpoint = new URL("https://api.scryfall.com/bulk-data");
-                JSONObject detailsJson = new JSONObject(IOUtils.toString(scryfallEndpoint, StandardCharsets.UTF_8));
+                JsonObject detailsJson = JsonParser.parseString(IOUtils.toString(scryfallEndpoint, StandardCharsets.UTF_8)).getAsJsonObject();
                 URL fullDataUrl = getDownloadURL(detailsJson);
                 if (fullDataUrl == null) {
                     event.getHook().sendMessage("Couldn't parse the bulk-data endpoint response").queue();
@@ -54,13 +50,13 @@ public class UpdateScryfallCommand extends ListenerAdapter {
         }
     }
 
-    private URL getDownloadURL(JSONObject detailsJson) throws MalformedURLException {
-        JSONArray data = detailsJson.getJSONArray("data");
-        for(int i = 0; i < data.length(); ++i) {
-            JSONObject obj = data.getJSONObject(i);
-            String type = obj.getString("type");
+    private URL getDownloadURL(JsonObject detailsJson) throws MalformedURLException {
+        JsonArray data = detailsJson.getAsJsonArray("data");
+        for(int i = 0; i < data.size(); ++i) {
+            JsonObject obj = data.get(i).getAsJsonObject();
+            String type = obj.get("type").getAsString();
             if ("default_cards".equals(type)) {
-                String downloadUrl = obj.getString("download_uri");
+                String downloadUrl = obj.get("download_uri").getAsString();
                 return new URL(downloadUrl);
             }
         }

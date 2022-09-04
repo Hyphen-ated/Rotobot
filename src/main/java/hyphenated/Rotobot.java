@@ -8,8 +8,9 @@ import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 
-public class Rotobot {
+import java.util.List;
 
+public class Rotobot {
 
     public static void main(String[] args) throws Exception {
         JDA api = JDABuilder.createDefault(Config.DISCORD_BOT_TOKEN)
@@ -24,4 +25,8 @@ public class Rotobot {
         ).queue();
     }
 
+    public static List<String> getLegalCardsFromScryfallData(String format) {
+        //JSONObject fullJson = new JSONObject(IOUtils.file(scryfallEndpoint, StandardCharsets.UTF_8));
+        return null;
+    }
 }
