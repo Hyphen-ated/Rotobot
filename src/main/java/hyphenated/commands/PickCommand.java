@@ -2,7 +2,7 @@ package hyphenated.commands;
 
 import hyphenated.Draft;
 import hyphenated.GSheets;
-import hyphenated.MySorensenDice;
+import hyphenated.util.MySorensenDice;
 import hyphenated.Rotobot;
 import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
@@ -138,12 +138,18 @@ public class PickCommand extends ListenerAdapter {
                 Map<String, Integer> trimmedProfile = sd.getProfile(trimmedChars);
 
                 int capacity = 200;
+                // some cards were prefixed with the first part of the query. rank them.
                 PriorityQueue<Pair<Double, String>> queue = new PriorityQueue<> (capacity);
                 for(String name : cards.values()) {
                     String lowerName = Rotobot.simplifyName(name);
                     if (draft.pickedCards.contains(lowerName)) {
                         continue;
                     }
+                    // e.g. if the search was "lilli veil"
+                    // and we're looking at the card "liliana of the veil"
+                    // we trimmed the query to "lil" and now we want to compare
+                    // "li veil" to "iana of the veil"
+                    // right now we're using sorensen-dice on the letter bigrams
                     String nameSuffix = lowerName.substring(prefix.length());
                     Map<String, Integer> suffixProfile = sd.getProfile(nameSuffix);
                     double distance = 1 - sd.similarity(trimmedProfile, suffixProfile);

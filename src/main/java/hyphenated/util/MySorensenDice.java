@@ -1,4 +1,4 @@
-package hyphenated;
+package hyphenated.util;
 
 import info.debatty.java.stringsimilarity.SorensenDice;
 
