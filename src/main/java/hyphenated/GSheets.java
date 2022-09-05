@@ -58,7 +58,7 @@ public class GSheets {
         return new AuthorizationCodeInstalledApp(flow, receiver).authorize("user");
     }
 
-    public static Draft readFromSheet(String sheetId) throws Exception {
+    public static synchronized Draft readFromSheet(String sheetId) throws Exception {
         final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
         Sheets service =
                 new Sheets.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
@@ -126,7 +126,7 @@ public class GSheets {
         return new Draft(sheetId, channelId, playerTags, legalCards, picks);
     }
 
-    public static int writePick(String sheetId, String cellCoord, String card) throws Exception {
+    public static synchronized int writePick(String sheetId, String cellCoord, String card) throws Exception {
         final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
         Sheets service =
                 new Sheets.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
