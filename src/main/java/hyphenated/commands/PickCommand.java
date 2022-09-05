@@ -4,11 +4,14 @@ import hyphenated.Draft;
 import hyphenated.GSheets;
 import hyphenated.util.MySorensenDice;
 import hyphenated.Rotobot;
+import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.commands.Command;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
+import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
+import net.dv8tion.jda.api.utils.messages.MessageCreateData;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
@@ -21,13 +24,18 @@ public class PickCommand extends ListenerAdapter {
     public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
         if (event.getName().equals(CMD)) {
             String reply = handleAndMakeReply(event);
-            event.reply(reply).queue();
+            MessageCreateData mcd = new MessageCreateBuilder()
+                    .setContent(reply)
+                    .setAllowedMentions(Collections.singleton(Message.MentionType.USER))
+                    .build();
+            event.reply(mcd).queue();
         }
     }
 
     public String handleAndMakeReply(SlashCommandInteractionEvent event) {
         String channelId = event.getMessageChannel().getId();
         Draft draft = Rotobot.drafts.get(channelId);
+        String nextPlayerId = "";
 
         if (draft == null) {
             return "I don't know of a draft happening in this channel";
@@ -63,19 +71,14 @@ public class PickCommand extends ListenerAdapter {
         }
         String username = event.getUser().getName();
         String usertag = event.getUser().getAsTag();
-        if (!draft.playerPickLists.containsKey(usertag)) {
+        if (!draft.players.containsKey(usertag)) {
             return username + ", you're not in this draft";
         }
         try {
-            int playerPos = 0;
-            for (String player : draft.playerPickLists.keySet()) {
-                if(player.equals(usertag)) {
-                    break;
-                }
-                ++playerPos;
-            }
-            char column = (char)((int)'C' + playerPos);
-            int row = 2 + draft.playerPickLists.get(usertag).size();
+            Draft.Player player = draft.players.get(usertag);
+
+            char column = (char)((int)'B' + player.seat);
+            int row = 2 + player.pickList.size();
             String cellCoord = String.format("%c%d", column, row);
 
             int updatedCells = GSheets.writePick(draft.sheetId, cellCoord, card);
@@ -83,12 +86,29 @@ public class PickCommand extends ListenerAdapter {
                 return "The google sheets api said " + updatedCells + " cells were updated. It should be 1. There's a problem";
             }
 
+            int nextSeat;
+            // if we had an even number of picks already, we're passing right
+            if(player.pickList.size() % 2 == 0) {
+                nextSeat = player.seat + 1;
+            } else {
+                nextSeat = player.seat - 1;
+            }
+
+            // people at the edges dont notify when they make the first of their doublepicks
+            if(nextSeat >= 1 && nextSeat <= 8) {
+                nextPlayerId = draft.players.getValue(nextSeat-1).discordId;
+            }
+
         } catch (Exception e) {
             e.printStackTrace(); // todo log
             return "unexpected error while trying to write a pick to the sheet";
         }
 
-        return username + " picks " + card;
+        String suffix = "";
+        if(!StringUtils.isBlank(nextPlayerId)) {
+            suffix = " (next up: <@" + nextPlayerId + ">)";
+        }
+        return username + " picks " + card + suffix;
     }
 
     @Override

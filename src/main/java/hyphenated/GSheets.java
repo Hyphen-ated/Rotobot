@@ -65,17 +65,17 @@ public class GSheets {
                         .setApplicationName(APPLICATION_NAME)
                         .build();
 
-        // the player tags and the channel id are adjacent, get them together
-        final String playerRange = "engine!P2:X2";
+        // the player tags and ids and the channel id are adjacent, get them together
+        final String playerRange = "engine!P2:X3";
         ValueRange playerResponse = service.spreadsheets().values()
                 .get(sheetId, playerRange)
                 .execute();
         List<List<Object>> playerValues = playerResponse.getValues();
 
-
         if (playerValues == null || playerValues.isEmpty()) {
             throw new RuntimeException("Player tags came back empty, this shouldn't happen");
         }
+
         List<Object> playerObjs = playerValues.get(0);
         List<String> playerTags = new ArrayList<>(8);
         for(int i = 0; i < 8; ++i) {
@@ -83,6 +83,13 @@ public class GSheets {
             playerTags.add(playerObj.toString());
         }
         String channelId = playerObjs.get(8).toString();
+
+        List<Object> playerIdObjs = playerValues.get(1);
+        List<String> playerIds = new ArrayList<>(8);
+        for(int i = 0; i < 8; ++i) {
+            Object playerIdObj = playerIdObjs.get(i);
+            playerIds.add(playerIdObj.toString());
+        }
 
         final String legalityRange = "engine!A2:A";
         ValueRange legalityResponse = service.spreadsheets().values()
@@ -123,7 +130,7 @@ public class GSheets {
             }
         }
 
-        return new Draft(sheetId, channelId, playerTags, legalCards, picks);
+        return new Draft(sheetId, channelId, playerTags, playerIds, legalCards, picks);
     }
 
     public static synchronized int writePick(String sheetId, String cellCoord, String card) throws Exception {
