@@ -30,6 +30,7 @@ dependencies {
     implementation 'net.gcardone.junidecode:junidecode:0.4.1'
     implementation 'com.google.guava:guava:31.1-jre'
     implementation 'org.xerial:sqlite-jdbc:3.39.2.1'
+    implementation 'info.debatty:java-string-similarity:2.0.0'
 
     // sheets api stuff
     implementation 'com.google.api-client:google-api-client:2.0.0'

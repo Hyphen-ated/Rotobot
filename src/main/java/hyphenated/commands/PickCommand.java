@@ -2,6 +2,7 @@ package hyphenated.commands;
 
 import hyphenated.Draft;
 import hyphenated.GSheets;
+import hyphenated.MySorensenDice;
 import hyphenated.Rotobot;
 import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
@@ -133,29 +134,25 @@ public class PickCommand extends ListenerAdapter {
                 }
             } else {
                 // they typed something that doesn't match any cards
-                Set<Character> trimmedCharSet = new HashSet<>();
-                for(char c : trimmedChars.toCharArray()) {
-                    trimmedCharSet.add(c);
-                }
+                MySorensenDice sd = new MySorensenDice(2);
+                Map<String, Integer> trimmedProfile = sd.getProfile(trimmedChars);
+
                 int capacity = 200;
-                PriorityQueue<Pair<Integer, String>> queue = new PriorityQueue<> (capacity,(a, b)->Integer.compare(b.getKey(),a.getKey()));
+                PriorityQueue<Pair<Double, String>> queue = new PriorityQueue<> (capacity);
                 for(String name : cards.values()) {
                     String lowerName = Rotobot.simplifyName(name);
                     if (draft.pickedCards.contains(lowerName)) {
                         continue;
                     }
                     String nameSuffix = lowerName.substring(prefix.length());
-                    Set<Character> suffixChars = new HashSet<>();
-                    for(char c : nameSuffix.toCharArray()) {
-                        suffixChars.add(c);
-                    }
-                    suffixChars.retainAll(trimmedCharSet);
-                    Pair<Integer, String> pair = new ImmutablePair<>(suffixChars.size(), name);
+                    Map<String, Integer> suffixProfile = sd.getProfile(nameSuffix);
+                    double distance = 1 - sd.similarity(trimmedProfile, suffixProfile);
+                    Pair<Double, String> pair = new ImmutablePair<>(distance, name);
                     queue.add(pair);
                 }
 
                 for(int i = 0; i < 25; ++i) {
-                    Pair<Integer, String> pair = queue.poll();
+                    Pair<Double, String> pair = queue.poll();
                     if (pair == null) {
                         break;
                     }
