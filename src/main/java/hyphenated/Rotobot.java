@@ -1,33 +1,38 @@
 package hyphenated;
 
 import com.google.common.collect.Sets;
+import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.stream.JsonReader;
 import hyphenated.commands.PickCommand;
 import hyphenated.commands.UpdateScryfallCommand;
+import hyphenated.json.ActiveDraft;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.gcardone.junidecode.Junidecode;
-import org.apache.commons.collections4.Trie;
-import org.apache.commons.collections4.trie.PatriciaTrie;
 
+import java.io.FileReader;
+import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 
 public class Rotobot {
-    public static final Trie<String, String> vintageCardTrie = new PatriciaTrie<>();
+    public static final HashMap<String, String> cardsLowerToCaps = new HashMap<>();
+    // key: channel id
+    public static final ConcurrentHashMap<String, Draft> drafts = new ConcurrentHashMap<>();
 
     public static void main(String[] args) throws Exception {
-        getLegalCardsFromScryfallData("vintage");
+
+        readAllScryfallCardNames();
+        readAllDraftSheets();
 
         JDA api = JDABuilder.createDefault(Config.DISCORD_BOT_TOKEN)
                 .addEventListeners(new PickCommand())
@@ -43,7 +48,6 @@ public class Rotobot {
 
     }
 
-
     // for these kinds of cards we want to ignore the part after the // in the name.
     // for other kinds, e.g. "Fire // Ice", we want to keep the whole thing as is
     static final Set<String> layoutsToIgnoreBack = Sets.newHashSet(
@@ -52,7 +56,7 @@ public class Rotobot {
             "adventure",
             "modal_dfc");
 
-    public static List<String> getLegalCardsFromScryfallData(String format) throws Exception {
+    public static List<String> readAllScryfallCardNames() throws Exception {
         Gson gson = new Gson();
         JsonReader reader = new JsonReader(
                 Files.newBufferedReader(Path.of(Config.SCRYFALL_DEFAULT_CARDS_PATH),
@@ -68,17 +72,17 @@ public class Rotobot {
             if (layoutsToIgnoreBack.contains(layout)) {
                 cardName = extractFirstCardName(cardName);
             }
-            String legality = cardJson.get("legalities").getAsJsonObject()
-                                      .get(format).getAsString();
-            if (!"legal".equals(legality) && !"restricted".equals(legality)) {
-                continue;
-            }
+//            String legality = cardJson.get("legalities").getAsJsonObject()
+//                                      .get(format).getAsString();
+//            if (!"legal".equals(legality) && !"restricted".equals(legality)) {
+//                continue;
+//            }
 
             String lowerName = cardName.toLowerCase(Locale.ROOT);
-            if(vintageCardTrie.containsKey(lowerName)) {
+            if(cardsLowerToCaps.containsKey(lowerName)) {
                 continue;
             }
-            vintageCardTrie.put(lowerName, cardName);
+            cardsLowerToCaps.put(lowerName, cardName);
         }
         reader.endArray();
         reader.close();
@@ -92,6 +96,16 @@ public class Rotobot {
             return cardName.substring(0, idx);
         }
         throw new RuntimeException("Expected to find // in card: " + cardName);
+    }
+
+    private static void readAllDraftSheets() throws Exception{
+        Gson gson = new Gson();
+        Type type = new TypeToken<ArrayList<ActiveDraft>>(){}.getType();
+        List<ActiveDraft> activeDrafts = gson.fromJson(new FileReader(Config.ACTIVE_DRAFTS_PATH, StandardCharsets.UTF_8), type);
+        for(ActiveDraft activeDraft : activeDrafts) {
+            Draft draft = GSheets.readFromSheet(activeDraft.sheetId);
+            drafts.put(draft.channelId, draft);
+        }
     }
 
 }

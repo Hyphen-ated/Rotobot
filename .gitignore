@@ -1,6 +1,8 @@
 /.gradle
 /.idea
 /build
-token.txt
-.env
-scryfall-default-cards.json
+/.env
+/gsheet_credentials.json
+/rotobot.log
+/scryfall-default-cards.json
+/tokens/*
