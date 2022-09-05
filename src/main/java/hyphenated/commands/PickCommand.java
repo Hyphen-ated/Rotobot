@@ -9,6 +9,8 @@ import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.commands.Command;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.*;
 
@@ -26,16 +28,15 @@ public class PickCommand extends ListenerAdapter {
         String channelId = event.getMessageChannel().getId();
         Draft draft = Rotobot.drafts.get(channelId);
 
+        if (draft == null) {
+            return "I don't know of a draft happening in this channel";
+        }
         try {
             // update the draft from the sheet to make sure it's all fresh
             draft = GSheets.readFromSheet(draft.sheetId);
             Rotobot.drafts.put(channelId, draft);
         } catch (Exception e) {
             return "Unexpected error while refreshing the sheet before your pick";
-        }
-
-        if (draft == null) {
-            return "I don't know of a draft happening in this channel";
         }
 
         OptionMapping mapping = event.getOption("card");
@@ -101,16 +102,65 @@ public class PickCommand extends ListenerAdapter {
 
             String value = event.getFocusedOption().getValue();
             String lowerValue = Rotobot.simplifyName(value);
-            SortedMap<String, String> cards = draft.legalCardsTrie.prefixMap(lowerValue);
+            SortedMap<String, String> cards;
+
+            // try to find cards where the query string is a prefix of their name.
+            // if we can't find any, then start chopping letters off the end of the query until we
+            // get to a query that gives back some cards.
+            int endIdx = lowerValue.length() + 1; // +1 immediately gets minused so we start with the full thing
+            String prefix;
+            do {
+                --endIdx;
+                prefix = lowerValue.substring(0, endIdx);
+                cards = draft.legalCardsTrie.prefixMap(prefix);
+            } while (cards.size() == 0);
+
+            String trimmedChars = lowerValue.substring(endIdx);
+
             List<Command.Choice> options = new ArrayList<>(25);
-            int suggestionCount = 0;
-            for(String name : cards.values()) {
-                if(!draft.pickedCards.contains(Rotobot.simplifyName(name))) {
-                    options.add(new Command.Choice(name, name));
-                    ++suggestionCount;
-                    if (suggestionCount >= 25) {
+
+            if(trimmedChars.length() == 0) {
+                // we are in the "normal" case, the full query they gave is a prefix of some cards.
+                int suggestionCount = 0;
+                for (String name : cards.values()) {
+                    if (!draft.pickedCards.contains(Rotobot.simplifyName(name))) {
+                        options.add(new Command.Choice(name, name));
+                        ++suggestionCount;
+                        if (suggestionCount >= 25) {
+                            break;
+                        }
+                    }
+                }
+            } else {
+                // they typed something that doesn't match any cards
+                Set<Character> trimmedCharSet = new HashSet<>();
+                for(char c : trimmedChars.toCharArray()) {
+                    trimmedCharSet.add(c);
+                }
+                int capacity = 200;
+                PriorityQueue<Pair<Integer, String>> queue = new PriorityQueue<> (capacity,(a, b)->Integer.compare(b.getKey(),a.getKey()));
+                for(String name : cards.values()) {
+                    String lowerName = Rotobot.simplifyName(name);
+                    if (draft.pickedCards.contains(lowerName)) {
+                        continue;
+                    }
+                    String nameSuffix = lowerName.substring(prefix.length());
+                    Set<Character> suffixChars = new HashSet<>();
+                    for(char c : nameSuffix.toCharArray()) {
+                        suffixChars.add(c);
+                    }
+                    suffixChars.retainAll(trimmedCharSet);
+                    Pair<Integer, String> pair = new ImmutablePair<>(suffixChars.size(), name);
+                    queue.add(pair);
+                }
+
+                for(int i = 0; i < 25; ++i) {
+                    Pair<Integer, String> pair = queue.poll();
+                    if (pair == null) {
                         break;
                     }
+                    String name = pair.getValue();
+                    options.add(new Command.Choice(name, name));
                 }
             }
             event.replyChoices(options).queue();
