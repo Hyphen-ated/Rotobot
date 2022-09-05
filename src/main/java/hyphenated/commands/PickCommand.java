@@ -45,11 +45,11 @@ public class PickCommand extends ListenerAdapter {
             return "I couldn't get the card parameter from discord (???)";
         } else {
             String param = mapping.getAsString();
-            card = Rotobot.cardsLowerToCaps.get(param.toLowerCase(Locale.ROOT));
+            card = Rotobot.cardsLowerToCaps.get(Rotobot.simplifyName(param));
             if (StringUtils.isBlank(card)) {
                 return "I don't recognize " + param + " as a magic card in the scryfall data";
             }
-            cardLower = card.toLowerCase(Locale.ROOT);
+            cardLower = Rotobot.simplifyName(card);
         }
 
         if (StringUtils.isBlank(card)) {
@@ -100,12 +100,12 @@ public class PickCommand extends ListenerAdapter {
             }
 
             String value = event.getFocusedOption().getValue();
-            String lowerValue = value.toLowerCase(Locale.ROOT);
+            String lowerValue = Rotobot.simplifyName(value);
             SortedMap<String, String> cards = draft.legalCardsTrie.prefixMap(lowerValue);
             List<Command.Choice> options = new ArrayList<>(25);
             int suggestionCount = 0;
             for(String name : cards.values()) {
-                if(!draft.pickedCards.contains(name.toLowerCase(Locale.ROOT))) {
+                if(!draft.pickedCards.contains(Rotobot.simplifyName(name))) {
                     options.add(new Command.Choice(name, name));
                     ++suggestionCount;
                     if (suggestionCount >= 25) {

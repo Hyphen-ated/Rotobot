@@ -22,6 +22,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 
 
 public class Rotobot {
@@ -78,7 +79,7 @@ public class Rotobot {
 //                continue;
 //            }
 
-            String lowerName = cardName.toLowerCase(Locale.ROOT);
+            String lowerName = Rotobot.simplifyName(cardName);
             if(cardsLowerToCaps.containsKey(lowerName)) {
                 continue;
             }
@@ -108,4 +109,9 @@ public class Rotobot {
         }
     }
 
+    private static Pattern nonAlphanumeric = Pattern.compile("[^a-z0-9 ]");
+    public static String simplifyName(String name) {
+        return nonAlphanumeric.matcher(name.toLowerCase(Locale.ROOT))
+                              .replaceAll("");
+    }
 }

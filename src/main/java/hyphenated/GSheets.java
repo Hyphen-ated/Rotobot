@@ -117,7 +117,7 @@ public class GSheets {
             for (Object obj : row) {
                 String pick = obj.toString();
                 if(!StringUtils.isBlank(pick)) {
-                    picks.get(i).add(pick.toLowerCase(Locale.ROOT));
+                    picks.get(i).add(Rotobot.simplifyName(pick));
                 }
                 ++i;
             }

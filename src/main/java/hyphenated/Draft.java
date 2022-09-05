@@ -33,8 +33,8 @@ public class Draft {
             ++i;
         }
         for(String card : legalCards) {
-            String lowerCard = card.toLowerCase(Locale.ROOT);
-            this.legalCardsTrie.put(lowerCard, Rotobot.cardsLowerToCaps.get(lowerCard));
+            String simpleCard = Rotobot.simplifyName(card);
+            this.legalCardsTrie.put(simpleCard, Rotobot.cardsLowerToCaps.get(simpleCard));
 
         }
     }
