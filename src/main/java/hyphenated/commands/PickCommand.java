@@ -16,6 +16,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public class PickCommand extends ListenerAdapter {
@@ -108,7 +110,10 @@ public class PickCommand extends ListenerAdapter {
         if(!StringUtils.isBlank(nextPlayerId)) {
             suffix = " (next up: <@" + nextPlayerId + ">)";
         }
-        return username + " picks " + card + suffix;
+        String scryfallUrl = "<https://api.scryfall.com/cards/named?exact="
+                + URLEncoder.encode(card, StandardCharsets.UTF_8)
+                + "&format=image&version=normal>";
+        return username + " picks [" + card + "](" + scryfallUrl + ") " + suffix;
     }
 
     @Override
