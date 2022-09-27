@@ -15,12 +15,16 @@ import net.dv8tion.jda.api.utils.messages.MessageCreateData;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public class PickCommand extends ListenerAdapter {
+    private static final Logger logger = LoggerFactory.getLogger(PickCommand.class);
+
     public static final String CMD = "pick";
     @Override
     public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
@@ -149,6 +153,9 @@ public class PickCommand extends ListenerAdapter {
                 // we are in the "normal" case, the full query they gave is a prefix of some cards.
                 int suggestionCount = 0;
                 for (String name : cards.values()) {
+                    if (StringUtils.isBlank(name)) {
+                        logger.warn("Name was unexpectedly blank. given value is \"" + value + "\"");
+                    }
                     if (!draft.pickedCards.contains(Rotobot.simplifyName(name))) {
                         options.add(new Command.Choice(name, name));
                         ++suggestionCount;

@@ -14,6 +14,9 @@ import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.gcardone.junidecode.Junidecode;
+import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.FileReader;
 import java.lang.reflect.Type;
@@ -26,9 +29,12 @@ import java.util.regex.Pattern;
 
 
 public class Rotobot {
+    private static final Logger logger = LoggerFactory.getLogger(Rotobot.class);
     public static final HashMap<String, String> cardsLowerToCaps = new HashMap<>();
     // key: channel id
     public static final ConcurrentHashMap<String, Draft> drafts = new ConcurrentHashMap<>();
+
+
 
     public static void main(String[] args) throws Exception {
 
@@ -110,7 +116,7 @@ public class Rotobot {
     }
 
     private static Pattern nonAlphanumeric = Pattern.compile("[^a-z0-9 ]");
-    public static String simplifyName(String name) {
+    public static String simplifyName(@NotNull String name) {
         return nonAlphanumeric.matcher(name.toLowerCase(Locale.ROOT))
                               .replaceAll("");
     }

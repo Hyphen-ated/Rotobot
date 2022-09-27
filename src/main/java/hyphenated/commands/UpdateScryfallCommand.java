@@ -2,11 +2,14 @@ package hyphenated.commands;
 
 import com.google.gson.*;
 import hyphenated.Config;
+import hyphenated.Rotobot;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.net.MalformedURLException;
@@ -14,6 +17,8 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
 public class UpdateScryfallCommand extends ListenerAdapter {
+    private static final Logger logger = LoggerFactory.getLogger(UpdateScryfallCommand.class);
+
     public static final String CMD = "update_scryfall";
 
     @Override
