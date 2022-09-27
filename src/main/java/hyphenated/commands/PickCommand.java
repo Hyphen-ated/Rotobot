@@ -51,7 +51,9 @@ public class PickCommand extends ListenerAdapter {
             draft = GSheets.readFromSheet(draft.sheetId);
             Rotobot.drafts.put(channelId, draft);
         } catch (Exception e) {
-            return "Unexpected error while refreshing the sheet before your pick";
+            String msg = "Unexpected error while refreshing the sheet before your pick";
+            logger.error(msg, e);
+            return msg;
         }
 
         OptionMapping mapping = event.getOption("card");
@@ -106,8 +108,9 @@ public class PickCommand extends ListenerAdapter {
             }
 
         } catch (Exception e) {
-            e.printStackTrace(); // todo log
-            return "unexpected error while trying to write a pick to the sheet";
+            String msg = "unexpected error while trying to write a pick to the sheet";
+            logger.error(msg, e);
+            return msg;
         }
 
         String suffix = "";
@@ -155,6 +158,7 @@ public class PickCommand extends ListenerAdapter {
                 for (String name : cards.values()) {
                     if (StringUtils.isBlank(name)) {
                         logger.warn("Name was unexpectedly blank. given value is \"" + value + "\"");
+                        continue;
                     }
                     if (!draft.pickedCards.contains(Rotobot.simplifyName(name))) {
                         options.add(new Command.Choice(name, name));

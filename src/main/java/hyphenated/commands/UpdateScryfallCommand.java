@@ -50,7 +50,7 @@ public class UpdateScryfallCommand extends ListenerAdapter {
 
             } catch (Exception e) {
                 event.getHook().sendMessage("Exception while updating: " + e.getMessage()).queue();
-                e.printStackTrace(); //todo logger
+                logger.error("Exception while updating scryfall cards", e);
             }
         }
     }
