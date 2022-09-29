@@ -113,14 +113,17 @@ public class PickCommand extends ListenerAdapter {
             return msg;
         }
 
+        String sheetLink = "[sheet](<https://docs.google.com/spreadsheets/d/" + draft.sheetId + ">)";
+
         String suffix = "";
         if(!StringUtils.isBlank(nextPlayerId)) {
             suffix = " (next up: <@" + nextPlayerId + ">)";
         }
-        String scryfallUrl = "<https://api.scryfall.com/cards/named?exact="
+
+        String scryfallUrl = "<https://scryfall.com/search?q=!\""
                 + URLEncoder.encode(card, StandardCharsets.UTF_8)
-                + "&format=image&version=normal>";
-        return username + " picks [" + card + "](" + scryfallUrl + ") " + suffix;
+                + "\">";
+        return username + " picks [" + card + "](" + scryfallUrl + ") " + suffix + " (" + sheetLink + ")";
     }
 
     @Override
