@@ -1,6 +1,10 @@
 package hyphenated.json;
 
+import java.util.List;
+import java.util.Map;
+
 public class ActiveDraft {
     public String sheetId;
-    // in the future this will have preload data
+    // playerTag -> caps card names
+    public Map<String, List<String>> preloads;
 }

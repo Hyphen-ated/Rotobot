@@ -10,10 +10,11 @@ import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.client.util.store.FileDataStoreFactory;
+import com.google.api.services.drive.Drive;
+import com.google.api.services.drive.DriveScopes;
 import com.google.api.services.sheets.v4.Sheets;
 import com.google.api.services.sheets.v4.SheetsScopes;
-import com.google.api.services.sheets.v4.model.UpdateValuesResponse;
-import com.google.api.services.sheets.v4.model.ValueRange;
+import com.google.api.services.sheets.v4.model.*;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.*;
@@ -30,7 +31,7 @@ public class GSheets {
      * If modifying these scopes, delete your previously saved tokens/ folder.
      */
     private static final List<String> SCOPES =
-            Collections.singletonList(SheetsScopes.SPREADSHEETS);
+            List.of(SheetsScopes.SPREADSHEETS, DriveScopes.DRIVE);
     private static final String CREDENTIALS_FILE_PATH = "./gsheet_credentials.json";
 
     /**
@@ -110,23 +111,22 @@ public class GSheets {
                 .get(sheetId, mainRange)
                 .execute();
         List<List<Object>> mainValues = mainResponse.getValues();
-        if (mainValues == null || mainValues.isEmpty()) {
-            throw new RuntimeException("Draft sheet came back empty, this shouldn't happen");
-        }
 
         List<List<String>> picks = new ArrayList<>();
         for(int i = 0; i < 8; ++i) {
             picks.add(new ArrayList<>());
         }
 
-        for(List<Object> row : mainValues) {
-            int i = 0;
-            for (Object obj : row) {
-                String pick = obj.toString();
-                if(!StringUtils.isBlank(pick)) {
-                    picks.get(i).add(Rotobot.simplifyName(pick));
+        if (mainValues != null) { // it's null during a new draft
+            for (List<Object> row : mainValues) {
+                int i = 0;
+                for (Object obj : row) {
+                    String pick = obj.toString();
+                    if (!StringUtils.isBlank(pick)) {
+                        picks.get(i).add(Rotobot.simplifyName(pick));
+                    }
+                    ++i;
                 }
-                ++i;
             }
         }
 
@@ -152,5 +152,90 @@ public class GSheets {
         request.setValueInputOption("RAW");
         UpdateValuesResponse response = request.execute();
         return response.getUpdatedCells();
+    }
+
+    public static synchronized String createSheetCopy(String templateId,
+                                                      String draftName,
+                                                      String channelId,
+                                                      List<String> playerTags,
+                                                      List<String> playerIds,
+                                                      List<String> legalCards) throws Exception {
+        final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
+        Drive driveService = new Drive.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
+                .setApplicationName(APPLICATION_NAME)
+                .build();
+
+        com.google.api.services.drive.model.File nonUpdate = new com.google.api.services.drive.model.File();
+        nonUpdate.setName(draftName);
+        com.google.api.services.drive.model.File resp = driveService.files().copy(templateId, nonUpdate).execute();
+
+        String destinationSpreadsheetId = resp.getId();
+
+        Sheets service =
+                new Sheets.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
+                        .setApplicationName(APPLICATION_NAME)
+                        .build();
+
+        ValueRange engineRequestBody = new ValueRange();
+        List<Object> tagList = new ArrayList<>(playerTags);
+        tagList.add(channelId); // happens to come right after the tags
+
+        List<Object> idList = new ArrayList<>(playerIds);
+
+        List<List<Object>> outerList = new ArrayList<>();
+        outerList.add(tagList);
+        outerList.add(idList);
+        engineRequestBody.setValues(outerList);
+
+        Sheets.Spreadsheets.Values.Update engineRequest =
+                service.spreadsheets().values().update(destinationSpreadsheetId,
+                        "engine!P2:X3",
+                        engineRequestBody);
+        engineRequest.setValueInputOption("RAW");
+
+        UpdateValuesResponse engineResponse = engineRequest.execute();
+/////////////////////////////
+
+        ValueRange namesRequestBody = new ValueRange();
+        List<Object> namesList = new ArrayList<>();
+        for(String tag : playerTags) {
+            int hashIdx = tag.indexOf("#");
+            if (hashIdx == -1) {
+                namesList.add(tag);
+            } else {
+                namesList.add(tag.substring(0, hashIdx));
+            }
+        }
+        List<List<Object>> namesOuterList = new ArrayList<>();
+        namesOuterList.add(namesList);
+        namesRequestBody.setValues(namesOuterList);
+
+        Sheets.Spreadsheets.Values.Update namesRequest =
+                service.spreadsheets().values().update(destinationSpreadsheetId,
+                        "draft!C1:J1",
+                        namesRequestBody);
+        namesRequest.setValueInputOption("RAW");
+
+        UpdateValuesResponse namesResponse = namesRequest.execute();
+///////////////////////////
+
+        ValueRange legalRequestBody = new ValueRange();
+        List<List<Object>> legalOuterList = new ArrayList<>();
+        for(String card : legalCards) {
+            List<Object> legalInnerList = new ArrayList<>();
+            legalInnerList.add(card);
+            legalOuterList.add(legalInnerList);
+        }
+        legalRequestBody.setValues(legalOuterList);
+
+        Sheets.Spreadsheets.Values.Update legalRequest =
+                service.spreadsheets().values().update(destinationSpreadsheetId,
+                        "engine!A2:A" + (legalCards.size()+1),
+                        legalRequestBody);
+        legalRequest.setValueInputOption("RAW");
+
+        UpdateValuesResponse legalResponse = legalRequest.execute();
+
+        return destinationSpreadsheetId;
     }
 }

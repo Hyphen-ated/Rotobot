@@ -3,6 +3,7 @@ package hyphenated;
 import org.apache.commons.collections4.Trie;
 import org.apache.commons.collections4.map.LinkedMap;
 import org.apache.commons.collections4.trie.PatriciaTrie;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
@@ -26,21 +27,25 @@ public class Draft {
     public String channelName;
 
 
-    public Draft(String sheetId, String channelId,  List<String> playerTags, List<String> playerIds, Set<String> legalCards, List<List<String>> picks) {
+    public Draft(String sheetId, String channelId,  List<String> playerTags, List<String> playerIds, Set<String> legalCards, @Nullable List<List<String>> picks) {
         this.sheetId = sheetId;
         this.channelId = channelId;
-        if (playerTags.size() != 8 || picks.size() != 8 || playerIds.size() != 8) {
+        if (playerTags.size() != 8 || (picks != null && picks.size() != 8) || playerIds.size() != 8) {
             throw new RuntimeException("Bot doesn't support non-8 playercounts yet");
         }
         for(int i = 0; i < 8; ++i) {
             Player pObj = new Player();
-            pObj.pickList = picks.get(i);
+            if (picks != null) {
+                pObj.pickList = picks.get(i);
+            }
             pObj.seat = i + 1;
             pObj.discordId = playerIds.get(i);
             String playerTag = playerTags.get(i);
             players.put(playerTag, pObj);
 
-            pickedCards.addAll(pObj.pickList);
+            if(pObj.pickList != null) {
+                pickedCards.addAll(pObj.pickList);
+            }
         }
 
         for(String card : legalCards) {

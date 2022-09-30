@@ -113,7 +113,7 @@ public class PickCommand extends ListenerAdapter {
             return msg;
         }
 
-        String sheetLink = "[sheet](<https://docs.google.com/spreadsheets/d/" + draft.sheetId + ">)";
+        String sheetLink = "[sheet](<" + Rotobot.formatSheetUrl(draft.sheetId) + ">)";
 
         String suffix = "";
         if(!StringUtils.isBlank(nextPlayerId)) {

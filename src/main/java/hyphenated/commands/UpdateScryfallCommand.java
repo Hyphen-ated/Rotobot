@@ -44,12 +44,14 @@ public class UpdateScryfallCommand extends ListenerAdapter {
                     return;
                 }
                 FileUtils.copyURLToFile(fullDataUrl, new File(Config.SCRYFALL_DEFAULT_CARDS_PATH), 5000, 5000);
+                Rotobot.getLegalCardsAndUpdateCapsMap(null);
                 long elapsedSecs = (System.currentTimeMillis() - startTime)/1000;
                 String msg = String.format("Done updating scryfall data in %d seconds", elapsedSecs);
                 event.getHook().sendMessage(msg).queue();
 
+
             } catch (Exception e) {
-                event.getHook().sendMessage("Exception while updating: " + e.getMessage()).queue();
+                event.getHook().sendMessage("Exception while updating scryfall cards").queue();
                 logger.error("Exception while updating scryfall cards", e);
             }
         }
