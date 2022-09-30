@@ -12,6 +12,7 @@ import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.client.util.store.FileDataStoreFactory;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.DriveScopes;
+import com.google.api.services.drive.model.Permission;
 import com.google.api.services.sheets.v4.Sheets;
 import com.google.api.services.sheets.v4.SheetsScopes;
 import com.google.api.services.sheets.v4.model.*;
@@ -235,6 +236,13 @@ public class GSheets {
         legalRequest.setValueInputOption("RAW");
 
         UpdateValuesResponse legalResponse = legalRequest.execute();
+//////////////////////////
+
+        Permission permission = new Permission();
+        permission.setType("anyone");
+        permission.setRole("writer");
+        Permission permissionResponse =
+                driveService.permissions().create(destinationSpreadsheetId, permission).execute();
 
         return destinationSpreadsheetId;
     }

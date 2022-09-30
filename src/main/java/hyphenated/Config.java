@@ -9,9 +9,12 @@ public class Config {
     public static final String DISCORD_BOT_TOKEN;
     public static final String OWNER_TAG;
 
+    public static final boolean PROD;
+
     static {
         Dotenv dotenv = Dotenv.load();
         DISCORD_BOT_TOKEN = dotenv.get("DISCORD_BOT_TOKEN");
         OWNER_TAG = dotenv.get("OWNER_TAG");
+        PROD = Boolean.parseBoolean(dotenv.get("PROD"));
     }
 }

@@ -77,12 +77,18 @@ public class StartDraftCommand extends ListenerAdapter {
                 String id = user.getId();
 
                 if (playerTags.contains(tag)) {
-                    tag += i;
-//                    return "You specified a player twice: " + tag;
+                    if(Config.PROD) {
+                        return "You specified a player twice: " + tag;
+                    } else {
+                        tag += i;
+                    }
                 }
                 if (playerIds.contains(id)) {
-                    id += i;
-//                    return "You specified a player twice (with this id): " + id;
+                    if(Config.PROD) {
+                        return "You specified a player twice (with this id): " + id;
+                    } else {
+                        id += i;
+                    }
                 }
                 playerTags.add(tag);
                 playerIds.add(id);
