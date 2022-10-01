@@ -9,11 +9,13 @@ import hyphenated.commands.StartDraftCommand;
 import hyphenated.commands.PickCommand;
 import hyphenated.commands.UpdateScryfallCommand;
 import hyphenated.json.ActiveDraft;
+import hyphenated.messagelisteners.MoxfieldListener;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
+import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.gcardone.junidecode.Junidecode;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -40,11 +42,13 @@ public class Rotobot {
         getLegalCardsAndUpdateCapsMap(null);
         readAllDraftSheets();
 
-        JDA api = JDABuilder.createDefault(Config.DISCORD_BOT_TOKEN)
-                .addEventListeners(new StartDraftCommand())
-                .addEventListeners(new EndDraftCommand())
-                .addEventListeners(new PickCommand())
-                .addEventListeners(new UpdateScryfallCommand())
+        JDA api = JDABuilder.createDefault(Config.DISCORD_BOT_TOKEN, GatewayIntent.GUILD_MESSAGES, GatewayIntent.MESSAGE_CONTENT)
+                .addEventListeners(
+                        new StartDraftCommand(),
+                        new EndDraftCommand(),
+                        new PickCommand(),
+                        new UpdateScryfallCommand(),
+                        new MoxfieldListener())
                 .build();
 
         api.updateCommands().addCommands(
