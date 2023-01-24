@@ -6,7 +6,7 @@ It needs privileged gateway intents: Message Content Intent, Read Messages/View 
 To join it to your server, be on https://discord.com/developers/applications/, go to OAuth2 -> URL Generator, pick "bot" and "applications.commands" and then visit that url.
 
 
-Copy .env.template to .env, put in a discord bot token and your admin discord tag.
+Copy .env.template to .env, put in a discord bot token (from the "Bot" page on the left of the discord link above) and your admin discord tag.
 
 Set up a google cloud project and create auth credentials for it as a desktop app: https://developers.google.com/sheets/api/quickstart/java
 
