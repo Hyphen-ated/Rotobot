@@ -29,12 +29,13 @@ public class PickCommand extends ListenerAdapter {
     @Override
     public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
         if (event.getName().equals(CMD)) {
+            event.deferReply().queue();
             String reply = handleAndMakeReply(event);
             MessageCreateData mcd = new MessageCreateBuilder()
                     .setContent(reply)
                     .setAllowedMentions(Collections.singleton(Message.MentionType.USER))
                     .build();
-            event.reply(mcd).queue();
+            event.getHook().sendMessage(mcd).queue();
         }
     }
 
