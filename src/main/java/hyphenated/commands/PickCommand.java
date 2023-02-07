@@ -26,14 +26,15 @@ public class PickCommand extends ListenerAdapter {
     private static final Logger logger = LoggerFactory.getLogger(PickCommand.class);
 
     public static final String CMD = "pick";
+    private static final Collection<Message.MentionType> userMentions =  Collections.singleton(Message.MentionType.USER);
     @Override
     public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
         if (event.getName().equals(CMD)) {
-            event.deferReply().queue();
+            event.deferReply().setAllowedMentions(userMentions).queue();
             String reply = handleAndMakeReply(event);
             MessageCreateData mcd = new MessageCreateBuilder()
                     .setContent(reply)
-                    .setAllowedMentions(Collections.singleton(Message.MentionType.USER))
+                    .setAllowedMentions(userMentions)
                     .build();
             event.getHook().sendMessage(mcd).queue();
         }
