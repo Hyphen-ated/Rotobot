@@ -1,5 +1,6 @@
 package hyphenated.commands;
 
+import hyphenated.Config;
 import hyphenated.Draft;
 import hyphenated.GSheets;
 import hyphenated.util.MySorensenDice;
@@ -8,6 +9,7 @@ import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.commands.Command;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
@@ -30,13 +32,17 @@ public class PickCommand extends ListenerAdapter {
     @Override
     public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
         if (event.getName().equals(CMD)) {
-            event.deferReply().setAllowedMentions(userMentions).queue();
+            InteractionHook hook = event.getHook();
+            event.deferReply(true).queue();
+
+            // send a followup message later because editing the initial deferral reply doesn't allow mentions
             String reply = handleAndMakeReply(event);
             MessageCreateData mcd = new MessageCreateBuilder()
                     .setContent(reply)
                     .setAllowedMentions(userMentions)
                     .build();
-            event.getHook().sendMessage(mcd).queue();
+            hook.sendMessage("Done").queue();
+            hook.sendMessage(mcd).queue();
         }
     }
 
@@ -84,8 +90,8 @@ public class PickCommand extends ListenerAdapter {
         if (!draft.players.containsKey(usertag)) {
             return username + ", you're not in this draft";
         }
+        Draft.Player player = draft.players.get(usertag);
         try {
-            Draft.Player player = draft.players.get(usertag);
 
             char column = (char)((int)'B' + player.seat);
             int row = 2 + player.pickList.size();
@@ -120,6 +126,9 @@ public class PickCommand extends ListenerAdapter {
         String suffix = "";
         if(!StringUtils.isBlank(nextPlayerId)) {
             suffix = " (next up: <@" + nextPlayerId + ">)";
+        }
+        if (!Config.PROD) {
+            suffix += "(you are <@" + player.discordId + ">)";
         }
 
         String scryfallUrl = "<https://scryfall.com/search?q=!\""
