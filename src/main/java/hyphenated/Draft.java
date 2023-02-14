@@ -24,10 +24,8 @@ public class Draft {
     public final Trie<String, String> legalCardsTrie = new PatriciaTrie<>();
 
     public String channelId;
-    public String channelName;
 
-
-    public Draft(String sheetId, String channelId,  List<String> playerTags, List<String> playerIds, Set<String> legalCards, @Nullable List<List<String>> picks) {
+    public Draft(String sheetId, String channelId, List<String> playerTags, List<String> playerIds, Set<String> legalCards, @Nullable List<List<String>> picks) {
         this.sheetId = sheetId;
         this.channelId = channelId;
         if (playerTags.size() != 8 || (picks != null && picks.size() != 8) || playerIds.size() != 8) {

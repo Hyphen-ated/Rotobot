@@ -11,10 +11,16 @@ public class Config {
 
     public static final boolean PROD;
 
+    public static final String LOWEST_OTHER_ROLE;
+
+    public static final String ACTIVE_DRAFTS_CATEGORY_ID;
+
     static {
         Dotenv dotenv = Dotenv.load();
         DISCORD_BOT_TOKEN = dotenv.get("DISCORD_BOT_TOKEN");
         OWNER_TAG = dotenv.get("OWNER_TAG");
         PROD = Boolean.parseBoolean(dotenv.get("PROD"));
+        LOWEST_OTHER_ROLE = dotenv.get("LOWEST_OTHER_ROLE");
+        ACTIVE_DRAFTS_CATEGORY_ID = dotenv.get("ACTIVE_DRAFTS_CATEGORY_ID");
     }
 }

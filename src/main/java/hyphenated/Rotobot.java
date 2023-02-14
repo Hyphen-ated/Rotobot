@@ -61,6 +61,7 @@ public class Rotobot {
                         .addOption(OptionType.USER, "p6", "Player 6", true)
                         .addOption(OptionType.USER, "p7", "Player 7", true)
                         .addOption(OptionType.USER, "p8", "Player 8", true)
+                        .addOption(OptionType.STRING, "name", "Name of the draft, e.g. dis99", true)
                         .addOption(OptionType.STRING, "format", "What cards are legal? e.g. vintage (editable in sheet later)"),
 
                 Commands.slash(EndDraftCommand.CMD, "End the draft in the current channel"),

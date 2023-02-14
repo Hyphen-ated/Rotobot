@@ -5,18 +5,23 @@ import hyphenated.Draft;
 import hyphenated.GSheets;
 import hyphenated.Rotobot;
 import hyphenated.json.ActiveDraft;
-import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
 import net.dv8tion.jda.api.utils.messages.MessageCreateData;
 
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.awt.*;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 
 public class StartDraftCommand extends ListenerAdapter {
@@ -32,21 +37,20 @@ public class StartDraftCommand extends ListenerAdapter {
                 event.reply("Only " + Config.OWNER_TAG + " can do this").queue();
                 return;
             }
-
             event.deferReply().queue();
-            String reply = handleAndMakeReply(event);
-            MessageCreateData mcd = new MessageCreateBuilder()
-                    .setContent(reply)
-                    .setAllowedMentions(Collections.singleton(Message.MentionType.USER))
-                    .build();
-            event.getHook().sendMessage(mcd).queue();
+            String maybeError = handle(event);
+            if (!StringUtils.isBlank(maybeError)) {
+                MessageCreateData mcd = new MessageCreateBuilder()
+                        .setContent(maybeError)
+                        .build();
+                event.getHook().sendMessage(mcd).queue();
+            }
         }
     }
 
-    public String handleAndMakeReply(SlashCommandInteractionEvent event) {
+    public String handle(SlashCommandInteractionEvent event) {
         try {
-            String channelId = event.getMessageChannel().getId();
-            String name = event.getChannel().getName();
+            Guild guild = event.getGuild();
 
             String format = "vintage";
             OptionMapping formatMapping = event.getOption("format");
@@ -54,21 +58,39 @@ public class StartDraftCommand extends ListenerAdapter {
                 format = formatMapping.getAsString();
             }
 
-            for(String existingChannelId : Rotobot.drafts.keySet()) {
-                if (existingChannelId.equals(channelId)) {
-                    return "A draft already exists in this channel ( " +
-                            Rotobot.formatSheetUrl(Rotobot.drafts.get(existingChannelId).sheetId) + ")";
-                }
-            }
-
             List<String> playerTags = new ArrayList<>(8);
             List<String> playerIds = new ArrayList<>(8);
             List<Integer> indexes = new ArrayList<>(8);
-            for(int i = 1; i <= 8; ++i) {
+            for (int i = 1; i <= 8; ++i) {
                 indexes.add(i);
             }
             Collections.shuffle(indexes);
 
+            String draftName = event.getOption("name").getAsString();
+            String draftNameDate = draftName + "-" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM"));
+            Role role = guild.createRole()
+                    .setName(draftName)
+                    .setMentionable(true)
+                    .setHoisted(true)
+                    .setColor(new Color(randColorInt(), randColorInt(), randColorInt()))
+                    .complete();
+
+            if (!StringUtils.isBlank(Config.LOWEST_OTHER_ROLE)) {
+                List<Role> roles = guild.modifyRolePositions().getCurrentOrder();
+                int lowestOtherRoleIdx = 0;
+                for (Role existingRole : roles) {
+                    if (existingRole.getName().equals(Config.LOWEST_OTHER_ROLE)) {
+                        break;
+                    }
+                    ++lowestOtherRoleIdx;
+                }
+                int targetRole = lowestOtherRoleIdx - 1;
+                if (targetRole < 0) targetRole = 0;
+                guild.modifyRolePositions(true)
+                        .selectPosition(role)
+                        .moveTo(targetRole)
+                        .queue();
+            }
             for (int j = 0; j < 8; ++j) {
                 int i = indexes.get(j);
                 OptionMapping mapping = event.getOption("p" + i);
@@ -92,12 +114,24 @@ public class StartDraftCommand extends ListenerAdapter {
                 }
                 playerTags.add(tag);
                 playerIds.add(id);
+
+                guild.addRoleToMember(user, role).queue();
             }
 
+            TextChannel channel = null;
+            if (!StringUtils.isBlank(Config.ACTIVE_DRAFTS_CATEGORY_ID)) {
+                Category parentCategory = guild.getCategoryById(Config.ACTIVE_DRAFTS_CATEGORY_ID);
+                channel = guild
+                        .createTextChannel(draftNameDate, parentCategory)
+                        .complete();
+            } else {
+                channel = guild.createTextChannel(draftNameDate).complete();
+            }
+            String channelId = channel.getId();
             List<String> legalCards = Rotobot.getLegalCardsAndUpdateCapsMap(format);
 
             String newSheetId = GSheets.createSheetCopy(TEMPLATE_SHEET_ID,
-                    name,
+                    draftNameDate,
                     channelId,
                     playerTags,
                     playerIds,
@@ -105,6 +139,7 @@ public class StartDraftCommand extends ListenerAdapter {
 
             ActiveDraft activeDraft = new ActiveDraft();
             activeDraft.sheetId = newSheetId;
+            activeDraft.name = draftName;
             Rotobot.jsonDAO.addDraft(activeDraft);
 
             Draft newDraft = new Draft(
@@ -116,11 +151,30 @@ public class StartDraftCommand extends ListenerAdapter {
                     null);
             Rotobot.drafts.put(channelId, newDraft);
 
-            return "[New draft!](" + Rotobot.formatSheetUrl(newSheetId) + ">) First up: <@" + playerIds.get(0) + ">";
+            String firstMessageStr = "New draft! <" + Rotobot.formatSheetUrl(newSheetId) + "> First up: <@" + playerIds.get(0) + ">";
+
+            MessageCreateData firstMcd = new MessageCreateBuilder()
+                    .setContent(firstMessageStr)
+                    .setAllowedMentions(Collections.singleton(Message.MentionType.USER))
+                    .build();
+
+            Message firstMessage = channel.sendMessage(firstMcd).complete();
+            firstMessage.pin().queue();
+
+            String reply = "Draft created in #" +draftNameDate;
+            MessageCreateData mcd = new MessageCreateBuilder()
+                    .setContent(reply)
+                    .build();
+            event.getHook().sendMessage(mcd).queue();
+            return null;
+
         } catch (Exception e) {
             logger.error("Exception while making a new draft", e);
             return "Exception while making a new draft";
         }
     }
 
+    private int randColorInt() {
+        return ThreadLocalRandom.current().nextInt(30, 256);
+    }
 }
