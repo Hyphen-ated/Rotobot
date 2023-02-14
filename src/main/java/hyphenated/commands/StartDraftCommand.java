@@ -161,7 +161,7 @@ public class StartDraftCommand extends ListenerAdapter {
             Message firstMessage = channel.sendMessage(firstMcd).complete();
             firstMessage.pin().queue();
 
-            String reply = "Draft created in #" +draftNameDate;
+            String reply = "Draft created in <#" +channelId + ">";
             MessageCreateData mcd = new MessageCreateBuilder()
                     .setContent(reply)
                     .build();
