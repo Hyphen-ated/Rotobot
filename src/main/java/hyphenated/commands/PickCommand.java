@@ -143,7 +143,7 @@ public class PickCommand extends ListenerAdapter {
             String channelId = event.getMessageChannel().getId();
             Draft draft = Rotobot.drafts.get(channelId);
             if (draft == null) {
-                event.replyChoices(Collections.emptyList()).queue();
+                event.replyChoices(new Command.Choice("There's no draft in this channel", "There's no draft in this channel")).queue();
                 return;
             }
 

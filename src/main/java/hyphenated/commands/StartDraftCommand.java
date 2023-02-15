@@ -1,9 +1,6 @@
 package hyphenated.commands;
 
-import hyphenated.Config;
-import hyphenated.Draft;
-import hyphenated.GSheets;
-import hyphenated.Rotobot;
+import hyphenated.*;
 import hyphenated.json.ActiveDraft;
 import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
@@ -64,7 +61,9 @@ public class StartDraftCommand extends ListenerAdapter {
             for (int i = 1; i <= 8; ++i) {
                 indexes.add(i);
             }
-            Collections.shuffle(indexes);
+            if (Config.PROD) {
+                Collections.shuffle(indexes);
+            }
 
             String draftName = event.getOption("name").getAsString();
             String draftNameDate = draftName + "-" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM"));
@@ -151,7 +150,8 @@ public class StartDraftCommand extends ListenerAdapter {
                     null);
             Rotobot.drafts.put(channelId, newDraft);
 
-            String firstMessageStr = "New draft! <" + Rotobot.formatSheetUrl(newSheetId) + "> First up: <@" + playerIds.get(0) + ">";
+            String firstMessageStr = "New draft! <" + Rotobot.formatSheetUrl(newSheetId) + "> First up: <@" + playerIds.get(0) + ">\n"
+                    + RulesDAO.getRules();
 
             MessageCreateData firstMcd = new MessageCreateBuilder()
                     .setContent(firstMessageStr)
