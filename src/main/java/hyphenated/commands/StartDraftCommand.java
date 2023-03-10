@@ -28,10 +28,8 @@ public class StartDraftCommand extends ListenerAdapter {
     @Override
     public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
         if (event.getName().equals(CMD)) {
-            User user = event.getUser();
-            String tag = user.getAsTag();
-            if(!tag.equals(Config.OWNER_TAG)) {
-                event.reply("Only " + Config.OWNER_TAG + " can do this").queue();
+            if(!Rotobot.userIsAdmin(event)) {
+                event.reply("Only admins can start a draft").queue();
                 return;
             }
             event.deferReply().queue();

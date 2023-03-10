@@ -2,7 +2,6 @@ package hyphenated.commands;
 
 import hyphenated.Config;
 import hyphenated.Draft;
-import hyphenated.JsonDAO;
 import hyphenated.Rotobot;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.User;
@@ -14,16 +13,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
+
 public class EndDraftCommand extends ListenerAdapter {
     private static final Logger logger = LoggerFactory.getLogger(EndDraftCommand.class);
     public static final String CMD = "enddraft";
     @Override
     public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
         if (event.getName().equals(CMD)) {
-            User user = event.getUser();
-            String tag = user.getAsTag();
-            if(!tag.equals(Config.OWNER_TAG)) {
-                event.reply("Only " + Config.OWNER_TAG + " can do this").queue();
+            if(!Rotobot.userIsAdmin(event)) {
+                event.reply("Only admins can end a draft").queue();
                 return;
             }
 

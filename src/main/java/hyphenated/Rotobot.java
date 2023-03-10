@@ -12,11 +12,17 @@ import hyphenated.json.ActiveDraft;
 import hyphenated.messagelisteners.MoxfieldListener;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
+import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.Role;
+import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.gcardone.junidecode.Junidecode;
+import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -149,7 +155,23 @@ public class Rotobot {
 
     public static String formatSheetUrl(String sheetId) {
         return "https://docs.google.com/spreadsheets/d/" + sheetId;
+    }
 
+    public static boolean userIsAdmin(SlashCommandInteractionEvent event) {
+        if (StringUtils.isBlank(Config.ADMIN_ROLE_ID)) {
+            return false;
+        }
+        User user = event.getUser();
+        Guild guild = event.getGuild();
+        if (guild == null) {
+            return false;
+        }
+        Member member = guild.getMemberById(user.getId());
+        if (member == null) {
+            return false;
+        }
+        List<Role> roles = member.getRoles();
+        return roles.stream().anyMatch(role -> role.getId().equals(Config.ADMIN_ROLE_ID));
     }
 
 }
