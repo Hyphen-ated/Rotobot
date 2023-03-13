@@ -160,7 +160,7 @@ public class GSheets {
                                                       String channelId,
                                                       List<String> playerTags,
                                                       List<String> playerIds,
-                                                      List<String> legalCards) throws Exception {
+                                                      List<Card> legalCards) throws Exception {
         final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
         Drive driveService = new Drive.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
                 .setApplicationName(APPLICATION_NAME)
@@ -222,16 +222,17 @@ public class GSheets {
 
         ValueRange legalRequestBody = new ValueRange();
         List<List<Object>> legalOuterList = new ArrayList<>();
-        for(String card : legalCards) {
+        for(Card card : legalCards) {
             List<Object> legalInnerList = new ArrayList<>();
-            legalInnerList.add(card);
+            legalInnerList.add(card.name);
+            legalInnerList.add(card.color);
             legalOuterList.add(legalInnerList);
         }
         legalRequestBody.setValues(legalOuterList);
 
         Sheets.Spreadsheets.Values.Update legalRequest =
                 service.spreadsheets().values().update(destinationSpreadsheetId,
-                        "engine!A2:A" + (legalCards.size()+1),
+                        "engine!A2:B" + (legalCards.size()+1),
                         legalRequestBody);
         legalRequest.setValueInputOption("RAW");
 

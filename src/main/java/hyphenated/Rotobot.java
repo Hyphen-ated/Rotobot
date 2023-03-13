@@ -2,6 +2,8 @@ package hyphenated;
 
 import com.google.common.collect.Sets;
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.stream.JsonReader;
 import hyphenated.commands.EndDraftCommand;
@@ -92,7 +94,7 @@ public class Rotobot {
             "adventure",
             "modal_dfc");
 
-    public synchronized static List<String> getLegalCardsAndUpdateCapsMap(@Nullable String format) throws Exception {
+    public synchronized static List<Card> getLegalCardsAndUpdateCapsMap(@Nullable String format) throws Exception {
         Gson gson = new Gson();
         JsonReader reader = new JsonReader(
                 Files.newBufferedReader(Path.of(Config.SCRYFALL_DEFAULT_CARDS_PATH),
@@ -101,11 +103,12 @@ public class Rotobot {
         ConcurrentHashMap<String, String> newCapsMap = new ConcurrentHashMap<>();
 
         reader.beginArray();
-        List<String> output = new ArrayList<>(30000);
+        List<Card> output = new ArrayList<>(30000);
         while (reader.hasNext()) {
             JsonObject cardJson = gson.fromJson(reader, JsonObject.class);
             String cardName = cardJson.get("name").getAsString();
             cardName = Junidecode.unidecode(cardName);
+
             String layout = cardJson.get("layout").getAsString();
             if (layoutsToIgnoreBack.contains(layout)) {
                 cardName = extractFirstCardName(cardName);
@@ -121,7 +124,31 @@ public class Rotobot {
                 String legality = cardJson.get("legalities").getAsJsonObject()
                         .get(format).getAsString();
                 if ("legal".equals(legality) || "restricted".equals(legality)) {
-                    output.add(cardName);
+                    JsonElement typeElem = cardJson.get("type_line");
+
+                    JsonElement colorArray;
+                    if (typeElem != null && typeElem.getAsString().contains("Land")) {
+                        colorArray = cardJson.get("color_identity");
+                    } else {
+                        colorArray = cardJson.get("colors");
+                    }
+
+                    String colorCategory;
+                    if (colorArray == null) {
+                        colorCategory = "";
+                    } else {
+                        JsonArray arr = colorArray.getAsJsonArray();
+                        if (arr.isEmpty()) {
+                            colorCategory = "";
+                        } else {
+                            StringBuilder colors = new StringBuilder();
+                            for (JsonElement e : arr) {
+                                colors.append(e.getAsString());
+                            }
+                            colorCategory = colors.toString();
+                        }
+                    }
+                    output.add(new Card(cardName, colorCategory));
                 }
             }
         }

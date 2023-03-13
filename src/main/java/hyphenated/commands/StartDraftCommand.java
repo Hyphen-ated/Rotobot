@@ -25,7 +25,7 @@ public class StartDraftCommand extends ListenerAdapter {
     private static final Logger logger = LoggerFactory.getLogger(StartDraftCommand.class);
     public static final String STARTDRAFT = "startdraft";
     public static final String STARTDRAFT_REACTIONS = "startdraft-reactions";
-    private static final String TEMPLATE_SHEET_ID = "1u2bxYp6fHkrDHIjN9dM2vUhL3pn9f85BEQN1A_yf-W0";
+    private static final String TEMPLATE_SHEET_ID = "1pS6PFhn2gtshQM3pnFpDFqZcrj6q3nkUzMwo3EBPtek";
     @Override
     public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
         if (event.getName().equals(STARTDRAFT)) {
@@ -133,7 +133,7 @@ public class StartDraftCommand extends ListenerAdapter {
                 channel = guild.createTextChannel(draftNameDate).complete();
             }
             String channelId = channel.getId();
-            List<String> legalCards = Rotobot.getLegalCardsAndUpdateCapsMap(format);
+            List<Card> legalCards = Rotobot.getLegalCardsAndUpdateCapsMap(format);
 
             String newSheetId = GSheets.createSheetCopy(TEMPLATE_SHEET_ID,
                     draftNameDate,
@@ -147,12 +147,16 @@ public class StartDraftCommand extends ListenerAdapter {
             activeDraft.name = draftName;
             Rotobot.jsonDAO.addDraft(activeDraft);
 
+            HashSet<String> legalCardNameSet = new HashSet<>(legalCards.size());
+            for (Card card : legalCards) {
+                legalCardNameSet.add(card.name);
+            }
             Draft newDraft = new Draft(
                     newSheetId,
                     channelId,
                     playerTags,
                     playerIds,
-                    new HashSet<>(legalCards),
+                    legalCardNameSet,
                     null);
             Rotobot.drafts.put(channelId, newDraft);
 
