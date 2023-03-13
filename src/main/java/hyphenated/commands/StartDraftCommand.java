@@ -23,11 +23,12 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class StartDraftCommand extends ListenerAdapter {
     private static final Logger logger = LoggerFactory.getLogger(StartDraftCommand.class);
-    public static final String CMD = "startdraft";
+    public static final String STARTDRAFT = "startdraft";
+    public static final String STARTDRAFT_REACTIONS = "startdraft-reactions";
     private static final String TEMPLATE_SHEET_ID = "1u2bxYp6fHkrDHIjN9dM2vUhL3pn9f85BEQN1A_yf-W0";
     @Override
     public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
-        if (event.getName().equals(CMD)) {
+        if (event.getName().equals(STARTDRAFT)) {
             if(!Rotobot.userIsAdmin(event)) {
                 event.reply("Only admins can start a draft").queue();
                 return;
@@ -40,6 +41,13 @@ public class StartDraftCommand extends ListenerAdapter {
                         .build();
                 event.getHook().sendMessage(mcd).queue();
             }
+        } else if (event.getName().equals(STARTDRAFT_REACTIONS)) {
+            if(!Rotobot.userIsAdmin(event)) {
+                event.reply("Only admins can start a draft").queue();
+                return;
+            }
+            event.deferReply().queue();
+
         }
     }
 

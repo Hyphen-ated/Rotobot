@@ -58,7 +58,7 @@ public class Rotobot {
                 .build();
 
         api.updateCommands().addCommands(
-                Commands.slash(StartDraftCommand.CMD, "Start a new draft")
+                Commands.slash(StartDraftCommand.STARTDRAFT, "Start a new draft")
                         .addOption(OptionType.USER, "p1", "Player 1", true)
                         .addOption(OptionType.USER, "p2", "Player 2", true)
                         .addOption(OptionType.USER, "p3", "Player 3", true)
