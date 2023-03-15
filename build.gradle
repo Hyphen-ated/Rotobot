@@ -1,6 +1,7 @@
 plugins {
-    id'application'
-    id'com.github.johnrengelman.shadow' version '5.2.0'
+    id 'application'
+    id 'com.github.johnrengelman.shadow' version '5.2.0'
+    id 'org.hidetake.ssh' version '2.11.2'
 }
 
 mainClassName = 'hyphenated.Rotobot'
@@ -46,6 +47,25 @@ dependencies {
 
 test {
     useJUnitPlatform()
+}
+
+remotes {
+    eggs {
+        host = 'eggs'
+        user = 'hyphen'
+        identity = file('C:\\utilities\\putty\\key-for-eggs.pem')
+    }
+}
+
+task deploy {
+    doLast {
+        ssh.run {
+            session(remotes.eggs) {
+                put from: file('build/libs/Rotobot-' + version + '-all.jar'), into: '/home/hyphen/rotobot/'
+                execute 'sudo systemctl restart rotobot'
+            }
+        }
+    }
 }
 
 
