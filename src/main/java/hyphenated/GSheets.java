@@ -103,8 +103,10 @@ public class GSheets {
         }
         HashSet<String> legalCards = new HashSet<>();
         for(List<Object> row : legalityValues) {
-            Object obj = row.get(0);
-            legalCards.add(obj.toString());
+            if (!row.isEmpty()) {
+                Object obj = row.get(0);
+                legalCards.add(obj.toString());
+            }
         }
 
         final String mainRange = "draft!C2:J47";
