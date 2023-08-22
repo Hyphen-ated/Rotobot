@@ -115,6 +115,12 @@ public class Rotobot {
                 cardName = extractFirstCardName(cardName);
             }
 
+            if ("meld".equals(layout) || "token".equals(layout)) {
+                // tokens are not legal. if there's a token with the same name as a real card and it's earlier in the
+                // sf data, then it would be a problem without checking it here.
+                continue;
+            }
+
             String lowerName = Rotobot.simplifyName(cardName);
             if(newCapsMap.containsKey(lowerName)) {
                 continue;
@@ -156,7 +162,9 @@ public class Rotobot {
         reader.endArray();
         reader.close();
         Collections.sort(output);
+        // newCapsMap contains lowercase -> properly cased mapping for ALL cards
         cardsLowerToCaps = newCapsMap;
+        // return value contains only cards legal in this format
         return output;
     }
 
