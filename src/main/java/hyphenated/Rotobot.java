@@ -92,7 +92,8 @@ public class Rotobot {
             "transform",
             "flip",
             "adventure",
-            "modal_dfc");
+            "modal_dfc",
+            "reversible_card");
 
     public synchronized static List<Card> getLegalCardsAndUpdateCapsMap(@Nullable String format) throws Exception {
         Gson gson = new Gson();
