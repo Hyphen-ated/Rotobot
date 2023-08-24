@@ -6,6 +6,8 @@ import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
 import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.google.api.client.http.HttpRequest;
+import com.google.api.client.http.HttpRequestInitializer;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.gson.GsonFactory;
@@ -60,10 +62,25 @@ public class GSheets {
         return new AuthorizationCodeInstalledApp(flow, receiver).authorize("user");
     }
 
+    // set the timeouts on a google api HttpRequestInitializer.
+    // see https://developers.google.com/api-client-library/java/google-api-java-client/errors
+    private static HttpRequestInitializer setHttpTimeout(final HttpRequestInitializer requestInitializer) {
+        return new HttpRequestInitializer() {
+            @Override
+            public void initialize(HttpRequest httpRequest) throws IOException {
+                requestInitializer.initialize(httpRequest);
+                httpRequest.setConnectTimeout(60000);  // 1 minute connect timeout
+                httpRequest.setReadTimeout(60000);  // 1 minute read timeout
+            }
+        };
+    }
+
     public static synchronized Draft readFromSheet(String sheetId) throws Exception {
         final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
+        Credential credential = getCredentials(HTTP_TRANSPORT);
+        HttpRequestInitializer requestInitializer = setHttpTimeout(credential);
         Sheets service =
-                new Sheets.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
+                new Sheets.Builder(HTTP_TRANSPORT, JSON_FACTORY, requestInitializer)
                         .setApplicationName(APPLICATION_NAME)
                         .build();
 

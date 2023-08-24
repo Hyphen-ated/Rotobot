@@ -128,7 +128,7 @@ public class PickCommand extends ListenerAdapter {
             suffix = " (next up: <@" + nextPlayerId + ">)";
         }
         if (!Config.PROD) {
-            suffix += "(you are <@" + player.discordId + ">)";
+            suffix += "(test: you are <@" + player.discordId + ">)";
         }
 
         String scryfallUrl = "<https://scryfall.com/search?q=!\""
