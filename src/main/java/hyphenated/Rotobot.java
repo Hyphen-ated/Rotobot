@@ -195,15 +195,12 @@ public class Rotobot {
 
     public static boolean userIsAdmin(SlashCommandInteractionEvent event) {
         if (StringUtils.isBlank(Config.ADMIN_ROLE_ID)) {
+            logger.error("ADMIN_ROLE_ID is unset");
             return false;
         }
-        User user = event.getUser();
-        Guild guild = event.getGuild();
-        if (guild == null) {
-            return false;
-        }
-        Member member = guild.getMemberById(user.getId());
+        Member member = event.getMember();
         if (member == null) {
+            logger.warn("member is null when checking userIsAdmin");
             return false;
         }
         List<Role> roles = member.getRoles();
