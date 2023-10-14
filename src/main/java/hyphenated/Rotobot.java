@@ -115,10 +115,18 @@ public class Rotobot {
                 cardName = extractFirstCardName(cardName);
             }
 
-            if ("meld".equals(layout) || "token".equals(layout)) {
+            if ("token".equals(layout)) {
                 // tokens are not legal. if there's a token with the same name as a real card and it's earlier in the
                 // sf data, then it would be a problem without checking it here.
                 continue;
+            }
+
+            if ("meld".equals(layout)) {
+                // if we are the back side of a meld card, we're not legal. but there's no clean easy check for that.
+                // we have to look at the "all_parts" and see if there's a meld_result with the same name.
+                if (meldCardIsBackSide(cardJson, cardName)) {
+                    continue;
+                }
             }
 
             String lowerName = Rotobot.simplifyName(cardName);
@@ -166,6 +174,22 @@ public class Rotobot {
         cardsLowerToCaps = newCapsMap;
         // return value contains only cards legal in this format
         return output;
+    }
+
+    private static boolean meldCardIsBackSide(JsonObject cardJson, String cardName) {
+        JsonArray all_parts = cardJson.getAsJsonArray("all_parts");
+        if (all_parts == null) {
+            throw new RuntimeException("A meld card didn't have 'all_parts' in the scryfall json");
+        }
+        for (JsonElement partElem : all_parts) {
+            JsonObject part = partElem.getAsJsonObject();
+            boolean isMeldResult = "meld_result".equals(part.get("component").getAsString());
+            boolean isSameName = cardName.equals(part.get("name").getAsString());
+            if (isMeldResult && isSameName) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static String extractFirstCardName(String cardName) {
