@@ -24,10 +24,18 @@ public class Draft {
     public final Trie<String, String> legalCardsTrie = new PatriciaTrie<>();
 
     public String channelId;
+    public SnakeStyle snakeStyle;
 
-    public Draft(String sheetId, String channelId, List<String> playerTags, List<String> playerIds, Set<String> legalCards, @Nullable List<List<String>> picks) {
+    public Draft(String sheetId,
+                 String channelId,
+                 List<String> playerTags,
+                 List<String> playerIds,
+                 SnakeStyle snakeStyle,
+                 Set<String> legalCards,
+                 @Nullable List<List<String>> picks) {
         this.sheetId = sheetId;
         this.channelId = channelId;
+        this.snakeStyle = snakeStyle;
         if (playerTags.size() != 8 || (picks != null && picks.size() != 8) || playerIds.size() != 8) {
             throw new RuntimeException("Bot doesn't support non-8 playercounts yet");
         }

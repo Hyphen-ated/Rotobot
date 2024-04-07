@@ -1,10 +1,7 @@
 package hyphenated.commands;
 
-import hyphenated.Config;
-import hyphenated.Draft;
-import hyphenated.GSheets;
+import hyphenated.*;
 import hyphenated.util.MySorensenDice;
-import hyphenated.Rotobot;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
@@ -103,16 +100,31 @@ public class PickCommand extends ListenerAdapter {
             }
 
             int nextSeat;
-            // if we had an even number of picks already, we're passing right
-            if(player.pickList.size() % 2 == 0) {
-                nextSeat = player.seat + 1;
-            } else {
-                nextSeat = player.seat - 1;
-            }
+            if (draft.snakeStyle == SnakeStyle.NYC) {
+                // if it's the very first round, we're passing left. else passing right
+                if(player.pickList.isEmpty()) {
+                    nextSeat = player.seat - 1;
+                } else {
+                    nextSeat = player.seat + 1;
+                }
+                if(nextSeat == 9) nextSeat = 1; // loop the right seat around to the start
+                // nextSeat can now be 0 at the very end of round 1. the only doublepick in the draft. so at that time
+                // don't do a next player ping
+                if(nextSeat > 0) {
+                    nextPlayerId = draft.players.getValue(nextSeat-1).discordId;
+                }
 
-            // people at the edges dont notify when they make the first of their doublepicks
-            if(nextSeat >= 1 && nextSeat <= 8) {
-                nextPlayerId = draft.players.getValue(nextSeat-1).discordId;
+            } else { // normal
+                // if we had an even number of picks already, we're passing right
+                if(player.pickList.size() % 2 == 0) {
+                    nextSeat = player.seat + 1;
+                } else {
+                    nextSeat = player.seat - 1;
+                }
+                // people at the edges dont notify when they make the first of their doublepicks
+                if(nextSeat >= 1 && nextSeat <= 8) {
+                    nextPlayerId = draft.players.getValue(nextSeat-1).discordId;
+                }
             }
 
         } catch (Exception e) {

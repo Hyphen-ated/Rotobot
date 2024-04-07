@@ -70,7 +70,8 @@ public class Rotobot {
                         .addOption(OptionType.USER, "p7", "Player 7", true)
                         .addOption(OptionType.USER, "p8", "Player 8", true)
                         .addOption(OptionType.STRING, "name", "Name of the draft, e.g. dis99", true)
-                        .addOption(OptionType.STRING, "format", "What cards are legal? e.g. vintage (editable in sheet later)"),
+                        .addOption(OptionType.STRING, "format", "What cards are legal? e.g. vintage (editable in sheet later)", false)
+                        .addOption(OptionType.STRING, "snakestyle", "What system to use for determining pick order (use 'nyc' for the nyc group; blank is normal)", false),
 
                 Commands.slash(EndDraftCommand.CMD, "End the draft in the current channel"),
 

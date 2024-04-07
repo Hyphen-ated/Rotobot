@@ -73,6 +73,15 @@ public class StartDraftCommand extends ListenerAdapter {
                 Collections.shuffle(indexes);
             }
 
+            SnakeStyle snakeStyle = SnakeStyle.NORMAL;
+            OptionMapping snakeStyleOpt = event.getOption("snakestyle");
+            if (snakeStyleOpt != null) {
+                String snakeStyleStr = snakeStyleOpt.getAsString();
+                if (snakeStyleStr.equalsIgnoreCase("nyc")) {
+                    snakeStyle = SnakeStyle.NYC;
+                }
+            }
+
             String draftName = event.getOption("name").getAsString();
             String draftNameDate = draftName + "-" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM"));
             Role role = guild.createRole()
@@ -140,6 +149,7 @@ public class StartDraftCommand extends ListenerAdapter {
             String newSheetId = GSheets.createSheetCopy(TEMPLATE_SHEET_ID,
                     draftNameDate,
                     channelId,
+                    snakeStyle,
                     playerTags,
                     playerIds,
                     legalCards);
@@ -158,6 +168,7 @@ public class StartDraftCommand extends ListenerAdapter {
                     channelId,
                     playerTags,
                     playerIds,
+                    snakeStyle,
                     legalCardNameSet,
                     null);
             Rotobot.drafts.put(channelId, newDraft);

@@ -84,8 +84,8 @@ public class GSheets {
                         .setApplicationName(APPLICATION_NAME)
                         .build();
 
-        // the player tags and ids and the channel id are adjacent, get them together
-        final String playerRange = "engine!P2:X3";
+        // player tags, player ids, channel id, snake style are all adjacent, get them together
+        final String playerRange = "engine!P2:Y3";
         ValueRange playerResponse = service.spreadsheets().values()
                 .get(sheetId, playerRange)
                 .execute();
@@ -102,6 +102,18 @@ public class GSheets {
             playerTags.add(playerObj.toString());
         }
         String channelId = playerObjs.get(8).toString();
+        SnakeStyle snakeStyle;
+        if (playerObjs.size() < 10 || playerObjs.get(9) == null) {
+            snakeStyle = SnakeStyle.NORMAL;
+        } else {
+            String snakeStyleStr = playerObjs.get(9).toString();
+            if (snakeStyleStr.equalsIgnoreCase("nyc")) {
+                snakeStyle = SnakeStyle.NYC;
+            } else {
+                snakeStyle = SnakeStyle.NORMAL;
+            }
+        }
+
 
         List<Object> playerIdObjs = playerValues.get(1);
         List<String> playerIds = new ArrayList<>(8);
@@ -150,7 +162,7 @@ public class GSheets {
             }
         }
 
-        return new Draft(sheetId, channelId, playerTags, playerIds, legalCards, picks);
+        return new Draft(sheetId, channelId, playerTags, playerIds, snakeStyle, legalCards, picks);
     }
 
     public static synchronized int writePick(String sheetId, String cellCoord, String card) throws Exception {
@@ -177,6 +189,7 @@ public class GSheets {
     public static synchronized String createSheetCopy(String templateId,
                                                       String draftName,
                                                       String channelId,
+                                                      SnakeStyle snakeStyle,
                                                       List<String> playerTags,
                                                       List<String> playerIds,
                                                       List<Card> legalCards) throws Exception {
@@ -199,6 +212,7 @@ public class GSheets {
         ValueRange engineRequestBody = new ValueRange();
         List<Object> tagList = new ArrayList<>(playerTags);
         tagList.add(channelId); // happens to come right after the tags
+        tagList.add(snakeStyle.name()); // and this comes right after the channel id
 
         List<Object> idList = new ArrayList<>(playerIds);
 
@@ -209,7 +223,7 @@ public class GSheets {
 
         Sheets.Spreadsheets.Values.Update engineRequest =
                 service.spreadsheets().values().update(destinationSpreadsheetId,
-                        "engine!P2:X3",
+                        "engine!P2:Y3",
                         engineRequestBody);
         engineRequest.setValueInputOption("RAW");
 
