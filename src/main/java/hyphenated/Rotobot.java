@@ -145,8 +145,22 @@ public class Rotobot {
                     JsonElement colorArray;
                     if (typeElem != null && typeElem.getAsString().contains("Land")) {
                         colorArray = cardJson.get("color_identity");
-                    } else {
+                    } else if (cardJson.has("colors")) {
                         colorArray = cardJson.get("colors");
+                    } else if (cardJson.has("card_faces")) {
+                        JsonArray cardFaces = cardJson.getAsJsonArray("card_faces");
+                        JsonElement frontElement = cardFaces.get(0);
+
+                        if (!frontElement.isJsonObject()) {
+                            throw new RuntimeException("card " + cardName + " has a card_faces but first elem isn't an object");
+                        }
+                        JsonObject frontFace = frontElement.getAsJsonObject();
+                        if (!frontFace.has("colors")) {
+                            throw new RuntimeException("card " + cardName + " has a first card_faces element with no 'colors'");
+                        }
+                        colorArray = frontFace.get("colors");
+                    } else {
+                        throw new RuntimeException("unable to find the color source for card:" + cardName);
                     }
 
                     String colorCategory;
