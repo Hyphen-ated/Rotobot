@@ -160,6 +160,10 @@ public class PickCommand extends ListenerAdapter {
             }
 
             String value = event.getFocusedOption().getValue();
+            if (StringUtils.isBlank(value)) {
+                event.replyChoices();
+                return;
+            }
             String lowerValue = Rotobot.simplifyName(value);
             SortedMap<String, String> cards;
 
