@@ -198,6 +198,6 @@ public class StartDraftCommand extends ListenerAdapter {
     }
 
     private int randColorInt() {
-        return ThreadLocalRandom.current().nextInt(30, 256);
+        return ThreadLocalRandom.current().nextInt(60, 256);
     }
 }
