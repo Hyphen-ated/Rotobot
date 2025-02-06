@@ -22,7 +22,7 @@ public class MoxfieldListener extends ListenerAdapter {
         }
 
         String content = message.getContentRaw();
-        if (content.contains("https://www.moxfield.com/decks/"))
+        if (content.contains("https://www.moxfield.com/decks/") || content.contains("https://moxfield.com/decks/"))
         {
             RestAction<Void> result = channel.pinMessageById(message.getIdLong());
             result.queue();
