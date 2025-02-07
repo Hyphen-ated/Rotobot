@@ -88,7 +88,7 @@ public class StartDraftCommand extends ListenerAdapter {
                     .setName(draftName)
                     .setMentionable(true)
                     .setHoisted(true)
-                    .setColor(new Color(randColorInt(), randColorInt(), randColorInt()))
+                    .setColor(generateRandomColor())
                     .complete();
 
             if (!StringUtils.isBlank(Config.LOWEST_OTHER_ROLE)) {
@@ -197,7 +197,53 @@ public class StartDraftCommand extends ListenerAdapter {
         }
     }
 
-    private int randColorInt() {
-        return ThreadLocalRandom.current().nextInt(60, 256);
+    private static Color generateRandomColor() {
+        // generate random hsl values (easier to constrain in the way i want)
+        // then convert to rgb
+        float h = ThreadLocalRandom.current().nextFloat();
+        float s = ThreadLocalRandom.current().nextFloat();
+        float l = ThreadLocalRandom.current().nextFloat();
+        // hue needs no restrictions on its range
+        s = s/5.0f + 0.4f; // evenly distribute between 0.4 and 0.6
+        l = l/2.0f + 0.3f; // evenly distribute between 0.3 and 0.8
+
+        float q = 0;
+
+        if (l < 0.5)
+            q = l * (1 + s);
+        else
+            q = (l + s) - (s * l);
+
+        float p = 2 * l - q;
+
+        float r = Math.max(0, HueToRGB(p, q, h + (1.0f / 3.0f)));
+        float g = Math.max(0, HueToRGB(p, q, h));
+        float b = Math.max(0, HueToRGB(p, q, h - (1.0f / 3.0f)));
+
+        r = Math.min(r, 1.0f);
+        g = Math.min(g, 1.0f);
+        b = Math.min(b, 1.0f);
+
+        return new Color((int)(255 * r), (int)(255 * g), (int)(255 * b));
+    }
+
+    // params between 0 and 1
+    private static float HueToRGB(float p, float q, float h)
+    {
+        if (h < 0) h += 1;
+        if (h > 1 ) h -= 1;
+        if (6 * h < 1)
+        {
+            return p + ((q - p) * 6 * h);
+        }
+        if (2 * h < 1 )
+        {
+            return  q;
+        }
+        if (3 * h < 2)
+        {
+            return p + ( (q - p) * 6 * ((2.0f / 3.0f) - h) );
+        }
+        return p;
     }
 }
