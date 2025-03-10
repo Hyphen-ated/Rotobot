@@ -225,6 +225,7 @@ public class PickCommand extends ListenerAdapter {
                     if (draft.pickedCards.contains(preloadLower)) {
                         nextPlayerId = null;
                         message.append("\n<@" + preloaderId + ">) preloaded \"" + preloadCard + "\" but it's been taken");
+                        playerPreloads.clear(); //all their preloads are now invalid if they got sniped
                         break;
                     }
                     draft.pickedCards.add(preloadLower);
