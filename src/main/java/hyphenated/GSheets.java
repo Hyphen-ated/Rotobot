@@ -114,7 +114,6 @@ public class GSheets {
             }
         }
 
-
         List<Object> playerIdObjs = playerValues.get(1);
         List<String> playerIds = new ArrayList<>(8);
         for(int i = 0; i < 8; ++i) {
@@ -185,6 +184,24 @@ public class GSheets {
         UpdateValuesResponse response = request.execute();
         return response.getUpdatedCells();
     }
+
+    // cards is a list of rows where each row is 8 entries. each entry is a card name or blank string
+    public static synchronized int writePickRows(String sheetId, String range, List<List<Object>> cards) throws Exception {
+        final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
+        Sheets service =
+                new Sheets.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
+                        .setApplicationName(APPLICATION_NAME)
+                        .build();
+
+        ValueRange requestBody = new ValueRange();
+        requestBody.setValues(cards);
+        Sheets.Spreadsheets.Values.Update request =
+                service.spreadsheets().values().update(sheetId, range, requestBody);
+        request.setValueInputOption("RAW");
+        UpdateValuesResponse response = request.execute();
+        return response.getUpdatedCells();
+    }
+
 
     public static synchronized String createSheetCopy(String templateId,
                                                       String draftName,

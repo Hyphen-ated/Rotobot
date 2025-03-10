@@ -6,18 +6,13 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.stream.JsonReader;
-import hyphenated.commands.EndDraftCommand;
-import hyphenated.commands.StartDraftCommand;
-import hyphenated.commands.PickCommand;
-import hyphenated.commands.UpdateScryfallCommand;
-import hyphenated.json.ActiveDraft;
+import hyphenated.commands.*;
+import hyphenated.json.DraftJson;
 import hyphenated.messagelisteners.MoxfieldListener;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
-import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Role;
-import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
@@ -55,6 +50,7 @@ public class Rotobot {
                         new StartDraftCommand(),
                         new EndDraftCommand(),
                         new PickCommand(),
+                        new PreloadCommand(),
                         new UpdateScryfallCommand(),
                         new MoxfieldListener())
                 .build();
@@ -78,8 +74,15 @@ public class Rotobot {
                 Commands.slash(PickCommand.CMD, "Picks a card in the current draft")
                         .addOption(OptionType.STRING, "card", "The card to pick", true, true),
 
-//                Commands.slash(PreloadCommand.CMD, "Preload one or more cards")
-//                        .addOption(OptionType.STRING, "cards", "Cards to preload, separated by | if more than one. Replaces any previous preloads.", true, false),
+                Commands.slash(PreloadCommand.CMD, "Preload one or more cards, replacing any existing preloads")
+                        .addOption(OptionType.STRING, "card", "Card to preload. \""
+                                + PreloadCommand.NONE_SUBCOMMAND + "\" to erase your preloads. \""
+                                + PreloadCommand.LIST_SUBCOMMAND + "\" to view your current ones.", true, true)
+                        .addOption(OptionType.STRING, "card2", "Card to preload next", false, true)
+                        .addOption(OptionType.STRING, "card3", "Card to preload next", false, true)
+                        .addOption(OptionType.STRING, "card4", "Card to preload next", false, true)
+                        .addOption(OptionType.STRING, "card5", "Card to preload next", false, true)
+                        .addOption(OptionType.STRING, "card6", "Card to preload next", false, true),
 
                 Commands.slash(UpdateScryfallCommand.CMD, "Download the latest scryfall data")
                         .setDefaultPermissions(DefaultMemberPermissions.DISABLED)
@@ -216,8 +219,8 @@ public class Rotobot {
     }
 
     private static void readAllDraftSheets() throws Exception{
-        for(ActiveDraft activeDraft : jsonDAO.getActiveDrafts()) {
-            Draft draft = GSheets.readFromSheet(activeDraft.sheetId);
+        for(DraftJson draftJson : jsonDAO.getDraftJsons()) {
+            Draft draft = GSheets.readFromSheet(draftJson.sheetId);
             drafts.put(draft.channelId, draft);
         }
     }

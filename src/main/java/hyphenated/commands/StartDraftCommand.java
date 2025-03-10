@@ -1,7 +1,7 @@
 package hyphenated.commands;
 
 import hyphenated.*;
-import hyphenated.json.ActiveDraft;
+import hyphenated.json.DraftJson;
 import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.entities.channel.concrete.Category;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
@@ -154,15 +154,22 @@ public class StartDraftCommand extends ListenerAdapter {
                     playerIds,
                     legalCards);
 
-            ActiveDraft activeDraft = new ActiveDraft();
-            activeDraft.sheetId = newSheetId;
-            activeDraft.name = draftName;
-            Rotobot.jsonDAO.addDraft(activeDraft);
+            DraftJson draftJson = new DraftJson();
+            draftJson.sheetId = newSheetId;
+            draftJson.name = draftName;
+            draftJson.preloads = new HashMap<>();
+            Rotobot.jsonDAO.setDraft(draftJson);
 
             HashSet<String> legalCardNameSet = new HashSet<>(legalCards.size());
             for (Card card : legalCards) {
                 legalCardNameSet.add(card.name);
             }
+
+            List<List<String>> picks = new ArrayList<>();
+            for(int i = 0; i < 8; ++i) {
+                picks.add(new ArrayList<>());
+            }
+
             Draft newDraft = new Draft(
                     newSheetId,
                     channelId,
@@ -170,7 +177,7 @@ public class StartDraftCommand extends ListenerAdapter {
                     playerIds,
                     snakeStyle,
                     legalCardNameSet,
-                    null);
+                    picks);
             Rotobot.drafts.put(channelId, newDraft);
 
             String firstMessageStr = "New draft! <" + Rotobot.formatSheetUrl(newSheetId) + "> First up: <@" + playerIds.get(0) + ">\n"
