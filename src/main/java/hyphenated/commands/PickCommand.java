@@ -214,17 +214,17 @@ public class PickCommand extends ListenerAdapter {
                     String preloadCard = Rotobot.cardsLowerToCaps.get(preloadLower);
                     if (StringUtils.isBlank(preloadCard)) {
                         nextPlayerId = null;
-                        message.append("\n<@" + preloaderId + ">) preloaded \"" + preloadLower + "\" but now I don't recognize it as a magic card in the scryfall data (???)");
+                        message.append("\n<@" + preloaderId + "> preloaded \"" + preloadLower + "\" but now I don't recognize it as a magic card in the scryfall data (???)");
                         break;
                     }
                     if (!draft.legalCardsTrie.containsKey(preloadLower)) {
                         nextPlayerId = null;
-                        message.append("\n<@" + preloaderId + ">) preloaded \"" + preloadCard + "\" but it isn't legal in this draft (???)");
+                        message.append("\n<@" + preloaderId + "> preloaded \"" + preloadCard + "\" but it isn't legal in this draft (???)");
                         break;
                     }
                     if (draft.pickedCards.contains(preloadLower)) {
                         nextPlayerId = null;
-                        message.append("\n<@" + preloaderId + ">) preloaded \"" + preloadCard + "\" but it's been taken");
+                        message.append("\n<@" + preloaderId + "> preloaded \"" + preloadCard + "\" but it's been taken");
                         playerPreloads.clear(); //all their preloads are now invalid if they got sniped
                         break;
                     }
