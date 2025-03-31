@@ -154,7 +154,6 @@ public class PickCommand extends ListenerAdapter {
         StringBuilder message = new StringBuilder();
         int firstChangedRow = -1;
         int firstChangedSeat = -1;
-        int lastChangedPreloadRow = -1;
         // first, try to find where this pick itself goes
         int idx = 0;
         for (idx = 0; idx < draftSize; ++idx) {
@@ -189,6 +188,16 @@ public class PickCommand extends ListenerAdapter {
         }
 
         int preloadsProcessed = 0;
+        // cardsToSend is only needed when preloads exist
+        List<List<Object>> cardsToSend = new ArrayList<>();
+        ArrayList<Object> firstSendRow = new ArrayList<>(8);
+
+        for (int ii = 0; ii < 8; ++ii) {
+            firstSendRow.add(com.google.api.client.util.Data.NULL_STRING); // special google sheets api null string for "don't change"
+        }
+        cardsToSend.add(firstSendRow);
+        firstSendRow.set(firstChangedSeat-1, card);
+
         @Nullable String nextPlayerId = null;
         if (laterCellsArePopulated) {
             message.append("\nThere are unexpected picks already placed AFTER this. Double-check the sheet.");
@@ -200,6 +209,15 @@ public class PickCommand extends ListenerAdapter {
                 String preloaderTag = draft.players.get(seat - 1);
                 String preloaderId = draft.players.getValue(seat - 1).discordId;
                 @Nullable List<String> playerPreloads = draftJson.preloads.get(preloaderTag);
+                int relativeRowIdx = row - firstChangedRow;
+                if (cardsToSend.size() <= relativeRowIdx) {
+                    ArrayList<Object> newRow = new ArrayList<>(8);
+                    for (int ii = 0; ii < 8; ++ii) {
+                        newRow.add(com.google.api.client.util.Data.NULL_STRING); // special google sheets api null string for "don't change"
+                    }
+                    cardsToSend.add(newRow);
+                }
+                List<Object> currentRow = cardsToSend.get(relativeRowIdx);
                 if (playerPreloads == null || playerPreloads.isEmpty()) {
                     // they have no preload, so we're done with preloads
                     // figure out who to ping, if anyone
@@ -230,15 +248,15 @@ public class PickCommand extends ListenerAdapter {
                     }
                     draft.pickedCards.add(preloadLower);
                     draft.picks.get(seat-1).add(preloadCard);
+                    currentRow.set(seat-1, preloadCard);
                     ++preloadsProcessed;
-                    lastChangedPreloadRow = row;
                     message.append("\n" + preloaderTag + " preloaded [" + preloadCard + "](" + scryfallUrl(preloadCard) + ")");
                 }
             }
         }
 
         try {
-            if (lastChangedPreloadRow == -1) {
+            if (preloadsProcessed == 0) {
                 // no preloads were processed. so just send one pick
                 String cellCoord = cellCoord(firstChangedSeat, firstChangedRow);
                 int updatedCells = GSheets.writePick(draft.sheetId, cellCoord, card);
@@ -246,26 +264,13 @@ public class PickCommand extends ListenerAdapter {
                     return "The google sheets api said " + updatedCells + " cells were updated. It should be 1. There's a problem";
                 }
             } else {
-                List<List<Object>> cardArrays = new ArrayList<>();
-                for (int i = firstChangedRow; i <= lastChangedPreloadRow; ++i) {
-                    List<Object> cardRow = new ArrayList<>();
-                    for (int j = 0; j < 8; ++j) {
-                        String cardToSend = getSheetPick(draft.picks, j + 1, i);
-                        if (cardToSend == null) {
-                            cardRow.add(com.google.api.client.util.Data.NULL_STRING); // ridiculous nonsense for google sheets java api
-                        } else {
-                            cardRow.add(cardToSend);
-                        }
-                    }
-                    cardArrays.add(cardRow);
-                }
 
                 // the 0th row is at "row 2" in the actual spreadsheet
                 int firstChangedSheetRow = firstChangedRow + 2;
-                int lastChangedSheetRow = lastChangedPreloadRow + 2;
+                int lastChangedSheetRow = firstChangedSheetRow + cardsToSend.size() - 1;
                 String cellsRange = "C" + firstChangedSheetRow + ":" + "J" + lastChangedSheetRow;
 
-                int updatedCells = GSheets.writePickRows(draft.sheetId, cellsRange, cardArrays);
+                int updatedCells = GSheets.writePickRows(draft.sheetId, cellsRange, cardsToSend);
                 int expectedUpdate = preloadsProcessed + 1;
                 if (updatedCells != expectedUpdate) {
                     return "The google sheets api said " + updatedCells + " cells were updated. It should be " + expectedUpdate + ". There's a problem";
