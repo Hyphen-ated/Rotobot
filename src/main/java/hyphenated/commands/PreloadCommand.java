@@ -135,6 +135,14 @@ public class PreloadCommand extends ListenerAdapter {
 
     public void onCommandAutoCompleteInteraction(CommandAutoCompleteInteractionEvent event) {
         if (event.getName().equals(CMD) && event.getFocusedOption().getName().startsWith("card")) {
+            String value = event.getFocusedOption().getValue();
+            if (LIST_SUBCOMMAND.equalsIgnoreCase(value)) {
+                event.replyChoice(LIST_SUBCOMMAND, LIST_SUBCOMMAND).queue();
+                return;
+            } else if (NONE_SUBCOMMAND.equalsIgnoreCase(value)) {
+                event.replyChoice(NONE_SUBCOMMAND, NONE_SUBCOMMAND).queue();
+                return;
+            }
             PickCommand.autocompleteCard(event);
         }
     }
