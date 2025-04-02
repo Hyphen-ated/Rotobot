@@ -65,7 +65,7 @@ public class PickCommand extends ListenerAdapter {
         int x=0;
     }
     @Override
-    public synchronized void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
+    public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
         if (event.getName().equals(CMD)) {
             InteractionHook hook = event.getHook();
             event.deferReply(true).queue();
@@ -89,7 +89,7 @@ public class PickCommand extends ListenerAdapter {
         return playerPicks.get(row);
     }
 
-    public String handleAndMakeReply(SlashCommandInteractionEvent event) {
+    public synchronized String handleAndMakeReply(SlashCommandInteractionEvent event) {
         String channelId = event.getMessageChannel().getId();
         Draft draft = Rotobot.drafts.get(channelId);
 
