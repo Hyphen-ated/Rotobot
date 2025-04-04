@@ -28,12 +28,13 @@ public class PreloadCommand extends ListenerAdapter {
     @Override
     public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
         if (event.getName().equals(CMD)) {
+            event.deferReply(true).queue();
             String reply = handleAndMakeReply(event);
-            event.reply(reply).setEphemeral(true).queue();
+            event.getHook().sendMessage(reply).queue();
         }
     }
 
-    public String handleAndMakeReply(SlashCommandInteractionEvent event) {
+    public synchronized String handleAndMakeReply(SlashCommandInteractionEvent event) {
         String channelId = event.getMessageChannel().getId();
         Draft draft = Rotobot.drafts.get(channelId);
         if (draft == null) {
