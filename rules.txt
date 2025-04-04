@@ -1,7 +1,8 @@
 Rules:
-* Played on cockatrice by default, but if both players agree they can use whatever program they want
-* Round robin matches
-* Draft-matters cards don't work
+* Played on cockatrice by default, but if both players agree they can use whatever program they want.
+* 40 card decks. Round robin matches.
+* Draft-matters cards don't work.
 * All cards with the supertype "Basic" are free.
 * After the draft you publish your maindeck and are locked in for each game 1. Don't look at other maindecks until you decide on yours.
-* There's 46 rounds in the draft
+* There's 46 rounds in the draft.
+* Sets/products that are fully spoiled when the draft begins are legal if someone points out that they exist before the end of the first draft round.
