@@ -276,13 +276,14 @@ public class GSheets {
             List<Object> legalInnerList = new ArrayList<>();
             legalInnerList.add(card.name);
             legalInnerList.add(card.color);
+            legalInnerList.add(card.setCode);
             legalOuterList.add(legalInnerList);
         }
         legalRequestBody.setValues(legalOuterList);
 
         Sheets.Spreadsheets.Values.Update legalRequest =
                 service.spreadsheets().values().update(destinationSpreadsheetId,
-                        "engine!A2:B" + (legalCards.size()+1),
+                        "engine!A2:C" + (legalCards.size()+1),
                         legalRequestBody);
         legalRequest.setValueInputOption("RAW");
 

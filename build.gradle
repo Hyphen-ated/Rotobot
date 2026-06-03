@@ -53,7 +53,7 @@ remotes {
     eggs {
         host = 'eggs'
         user = 'hyphen'
-        identity = file('C:\\utilities\\putty\\key-for-eggs.pem')
+        identity = file('/home/s/.ssh/key-for-eggs.pem')
     }
 }
 

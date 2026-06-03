@@ -111,6 +111,10 @@ public class Rotobot {
         List<Card> output = new ArrayList<>(30000);
         while (reader.hasNext()) {
             JsonObject cardJson = gson.fromJson(reader, JsonObject.class);
+            Boolean reprint = cardJson.get("reprint").getAsBoolean();
+            if (reprint) {
+                continue;
+            }
             String cardName = cardJson.get("name").getAsString();
             cardName = Junidecode.unidecode(cardName);
 
@@ -181,7 +185,8 @@ public class Rotobot {
                             colorCategory = colors.toString();
                         }
                     }
-                    output.add(new Card(cardName, colorCategory));
+                    String setCode = cardJson.get("set").getAsString();
+                    output.add(new Card(cardName, colorCategory, setCode));
                 }
             }
         }
