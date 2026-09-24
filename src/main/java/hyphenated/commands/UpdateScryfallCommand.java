@@ -11,10 +11,13 @@ import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
+import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.zip.GZIPInputStream;
 
 public class UpdateScryfallCommand extends ListenerAdapter {
     private static final Logger logger = LoggerFactory.getLogger(UpdateScryfallCommand.class);
@@ -43,7 +46,14 @@ public class UpdateScryfallCommand extends ListenerAdapter {
                     event.getHook().sendMessage("Couldn't parse the bulk-data endpoint response").queue();
                     return;
                 }
-                FileUtils.copyURLToFile(fullDataUrl, new File(Config.SCRYFALL_DEFAULT_CARDS_PATH), 5000, 5000);
+                // download gzipped card data from scryfall
+                FileUtils.copyURLToFile(fullDataUrl, new File(Config.SCRYFALL_DEFAULT_CARDS_GZ_PATH), 5000, 5000);
+
+                try (OutputStream outputStream = Files.newOutputStream(Path.of(Config.SCRYFALL_DEFAULT_CARDS_PATH))) {
+                    // read the gz file we just downloaded and extract it
+                    InputStream inputStream = new GZIPInputStream(Files.newInputStream(Path.of(Config.SCRYFALL_DEFAULT_CARDS_GZ_PATH)));
+                    IOUtils.copy(inputStream, outputStream);
+                }
                 Rotobot.getLegalCardsAndUpdateCapsMap(null);
                 long elapsedSecs = (System.currentTimeMillis() - startTime)/1000;
                 String msg = String.format("Done updating scryfall data in %d seconds", elapsedSecs);
@@ -63,7 +73,7 @@ public class UpdateScryfallCommand extends ListenerAdapter {
             JsonObject obj = data.get(i).getAsJsonObject();
             String type = obj.get("type").getAsString();
             if ("default_cards".equals(type)) {
-                String downloadUrl = obj.get("download_uri").getAsString();
+                String downloadUrl = obj.get("jsonl_download_uri").getAsString();
                 return new URL(downloadUrl);
             }
         }

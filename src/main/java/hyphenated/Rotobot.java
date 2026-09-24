@@ -25,6 +25,7 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -101,97 +102,97 @@ public class Rotobot {
 
     public synchronized static List<Card> getLegalCardsAndUpdateCapsMap(@Nullable String format) throws Exception {
         Gson gson = new Gson();
-        JsonReader reader = new JsonReader(
-                Files.newBufferedReader(Path.of(Config.SCRYFALL_DEFAULT_CARDS_PATH),
-                                        StandardCharsets.UTF_8));
 
         ConcurrentHashMap<String, String> newCapsMap = new ConcurrentHashMap<>();
-
-        reader.beginArray();
         List<Card> output = new ArrayList<>(30000);
-        while (reader.hasNext()) {
-            JsonObject cardJson = gson.fromJson(reader, JsonObject.class);
-            Boolean reprint = cardJson.get("reprint").getAsBoolean();
-            if (reprint) {
-                continue;
-            }
-            String cardName = cardJson.get("name").getAsString();
-            cardName = Junidecode.unidecode(cardName);
-
-            String layout = cardJson.get("layout").getAsString();
-            if (layoutsToIgnoreBack.contains(layout)) {
-                cardName = extractFirstCardName(cardName);
-            }
-
-            if ("token".equals(layout)) {
-                // tokens are not legal. if there's a token with the same name as a real card and it's earlier in the
-                // sf data, then it would be a problem without checking it here.
-                continue;
-            }
-
-            if ("meld".equals(layout)) {
-                // if we are the back side of a meld card, we're not legal. but there's no clean easy check for that.
-                // we have to look at the "all_parts" and see if there's a meld_result with the same name.
-                if (meldCardIsBackSide(cardJson, cardName)) {
+        try (BufferedReader fileReader = Files.newBufferedReader(Path.of(Config.SCRYFALL_DEFAULT_CARDS_PATH), StandardCharsets.UTF_8)) {
+            String line;
+            while ((line = fileReader.readLine()) != null) {
+                if (line.isBlank()) {
                     continue;
                 }
-            }
+                JsonObject cardJson = gson.fromJson(line, JsonObject.class);
 
-            String lowerName = Rotobot.simplifyName(cardName);
-            if(newCapsMap.containsKey(lowerName)) {
-                continue;
-            }
-            newCapsMap.put(lowerName, cardName);
+                Boolean reprint = cardJson.get("reprint").getAsBoolean();
+                if (reprint) {
+                    continue;
+                }
+                String cardName = cardJson.get("name").getAsString();
+                cardName = Junidecode.unidecode(cardName);
 
-            if(format != null) {
-                String legality = cardJson.get("legalities").getAsJsonObject()
-                        .get(format).getAsString();
-                if ("legal".equals(legality) || "restricted".equals(legality)) {
-                    JsonElement typeElem = cardJson.get("type_line");
+                String layout = cardJson.get("layout").getAsString();
+                if (layoutsToIgnoreBack.contains(layout)) {
+                    cardName = extractFirstCardName(cardName);
+                }
 
-                    JsonElement colorArray;
-                    if (typeElem != null && typeElem.getAsString().contains("Land")) {
-                        colorArray = cardJson.get("color_identity");
-                    } else if (cardJson.has("colors")) {
-                        colorArray = cardJson.get("colors");
-                    } else if (cardJson.has("card_faces")) {
-                        JsonArray cardFaces = cardJson.getAsJsonArray("card_faces");
-                        JsonElement frontElement = cardFaces.get(0);
+                if ("token".equals(layout)) {
+                    // tokens are not legal. if there's a token with the same name as a real card and it's earlier in the
+                    // sf data, then it would be a problem without checking it here.
+                    continue;
+                }
 
-                        if (!frontElement.isJsonObject()) {
-                            throw new RuntimeException("card " + cardName + " has a card_faces but first elem isn't an object");
-                        }
-                        JsonObject frontFace = frontElement.getAsJsonObject();
-                        if (!frontFace.has("colors")) {
-                            throw new RuntimeException("card " + cardName + " has a first card_faces element with no 'colors'");
-                        }
-                        colorArray = frontFace.get("colors");
-                    } else {
-                        throw new RuntimeException("unable to find the color source for card:" + cardName);
+                if ("meld".equals(layout)) {
+                    // if we are the back side of a meld card, we're not legal. but there's no clean easy check for that.
+                    // we have to look at the "all_parts" and see if there's a meld_result with the same name.
+                    if (meldCardIsBackSide(cardJson, cardName)) {
+                        continue;
                     }
+                }
 
-                    String colorCategory;
-                    if (colorArray == null) {
-                        colorCategory = "";
-                    } else {
-                        JsonArray arr = colorArray.getAsJsonArray();
-                        if (arr.isEmpty()) {
+                String lowerName = Rotobot.simplifyName(cardName);
+                if (newCapsMap.containsKey(lowerName)) {
+                    continue;
+                }
+                newCapsMap.put(lowerName, cardName);
+
+                if (format != null) {
+                    String legality = cardJson.get("legalities").getAsJsonObject()
+                            .get(format).getAsString();
+                    if ("legal".equals(legality) || "restricted".equals(legality)) {
+                        JsonElement typeElem = cardJson.get("type_line");
+
+                        JsonElement colorArray;
+                        if (typeElem != null && typeElem.getAsString().contains("Land")) {
+                            colorArray = cardJson.get("color_identity");
+                        } else if (cardJson.has("colors")) {
+                            colorArray = cardJson.get("colors");
+                        } else if (cardJson.has("card_faces")) {
+                            JsonArray cardFaces = cardJson.getAsJsonArray("card_faces");
+                            JsonElement frontElement = cardFaces.get(0);
+
+                            if (!frontElement.isJsonObject()) {
+                                throw new RuntimeException("card " + cardName + " has a card_faces but first elem isn't an object");
+                            }
+                            JsonObject frontFace = frontElement.getAsJsonObject();
+                            if (!frontFace.has("colors")) {
+                                throw new RuntimeException("card " + cardName + " has a first card_faces element with no 'colors'");
+                            }
+                            colorArray = frontFace.get("colors");
+                        } else {
+                            throw new RuntimeException("unable to find the color source for card:" + cardName);
+                        }
+
+                        String colorCategory;
+                        if (colorArray == null) {
                             colorCategory = "";
                         } else {
-                            StringBuilder colors = new StringBuilder();
-                            for (JsonElement e : arr) {
-                                colors.append(e.getAsString());
+                            JsonArray arr = colorArray.getAsJsonArray();
+                            if (arr.isEmpty()) {
+                                colorCategory = "";
+                            } else {
+                                StringBuilder colors = new StringBuilder();
+                                for (JsonElement e : arr) {
+                                    colors.append(e.getAsString());
+                                }
+                                colorCategory = colors.toString();
                             }
-                            colorCategory = colors.toString();
                         }
+                        String setCode = cardJson.get("set").getAsString();
+                        output.add(new Card(cardName, colorCategory, setCode));
                     }
-                    String setCode = cardJson.get("set").getAsString();
-                    output.add(new Card(cardName, colorCategory, setCode));
                 }
             }
         }
-        reader.endArray();
-        reader.close();
         Collections.sort(output);
         // newCapsMap contains lowercase -> properly cased mapping for ALL cards
         cardsLowerToCaps = newCapsMap;
