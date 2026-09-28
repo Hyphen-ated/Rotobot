@@ -5,7 +5,6 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.stream.JsonReader;
 import hyphenated.commands.*;
 import hyphenated.json.DraftJson;
 import hyphenated.messagelisteners.MoxfieldListener;
@@ -100,6 +99,14 @@ public class Rotobot {
             "modal_dfc",
             "reversible_card");
 
+    // with our human knowledge we know we should override these colors for the "color analysis" tab,
+    // according to rules that we can't easily formalize.
+    public static final HashMap<String, String> manualColorCategoryByName = new HashMap<>();
+    static {
+        manualColorCategoryByName.put("Karakas", "");
+        manualColorCategoryByName.put("Life // Death", "B");
+    }
+
     public synchronized static List<Card> getLegalCardsAndUpdateCapsMap(@Nullable String format) throws Exception {
         Gson gson = new Gson();
 
@@ -150,37 +157,22 @@ public class Rotobot {
                 }
                 newCapsMap.put(lowerName, cardName);
 
+                boolean legal = true;
                 if (format != null) {
                     String legality = cardJson.get("legalities").getAsJsonObject()
                             .get(format).getAsString();
-                    if ("legal".equals(legality) || "restricted".equals(legality)) {
-                        JsonElement typeElem = cardJson.get("type_line");
+                    legal = ("legal".equals(legality) || "restricted".equals(legality));
+                }
 
-                        JsonElement colorArray;
-                        if (typeElem != null && typeElem.getAsString().contains("Land")) {
-                            colorArray = cardJson.get("color_identity");
-                        } else if (cardJson.has("colors")) {
-                            colorArray = cardJson.get("colors");
-                        } else if (cardJson.has("card_faces")) {
-                            JsonArray cardFaces = cardJson.getAsJsonArray("card_faces");
-                            JsonElement frontElement = cardFaces.get(0);
-
-                            if (!frontElement.isJsonObject()) {
-                                throw new RuntimeException("card " + cardName + " has a card_faces but first elem isn't an object");
-                            }
-                            JsonObject frontFace = frontElement.getAsJsonObject();
-                            if (!frontFace.has("colors")) {
-                                throw new RuntimeException("card " + cardName + " has a first card_faces element with no 'colors'");
-                            }
-                            colorArray = frontFace.get("colors");
-                        } else {
-                            throw new RuntimeException("unable to find the color source for card:" + cardName);
-                        }
-
-                        String colorCategory;
-                        if (colorArray == null) {
-                            colorCategory = "";
-                        } else {
+                if (legal) {
+                    JsonElement typeElem = cardJson.get("type_line");
+                    String colorCategory;
+                    try {
+                        if (manualColorCategoryByName.containsKey(cardName)) {
+                            colorCategory = manualColorCategoryByName.get(cardName);
+                        } else if (typeElem != null && typeElem.getAsString().contains("Land")) {
+                            // land color identity is almost always a correct classification
+                            JsonElement colorArray = cardJson.get("color_identity");
                             JsonArray arr = colorArray.getAsJsonArray();
                             if (arr.isEmpty()) {
                                 colorCategory = "";
@@ -191,10 +183,35 @@ public class Rotobot {
                                 }
                                 colorCategory = colors.toString();
                             }
+                        } else if (layout.equals("split") || layout.equals("adventure") || layout.equals("prepare")) {
+                            // assume they realistically want to play all sides, so concat the mana costs
+                            JsonArray cardFaces = cardJson.getAsJsonArray("card_faces");
+                            String manaCost = cardFaces.get(0).getAsJsonObject().get("mana_cost").getAsString()
+                                            + cardFaces.get(1).getAsJsonObject().get("mana_cost").getAsString();
+                            colorCategory = colorCategoryFromManaCost(manaCost);
+                        } else if (cardJson.has("card_faces")) {
+                            // any other multiface thing, just take the front face
+                            JsonArray cardFaces = cardJson.getAsJsonArray("card_faces");
+                            String manaCost = cardFaces.get(0).getAsJsonObject().get("mana_cost").getAsString();
+                            colorCategory = colorCategoryFromManaCost(manaCost);
+                        } else {
+                            // normal nonland single-face cards
+                            String manaCost = cardJson.get("mana_cost").getAsString();
+                            double cmc = cardJson.get("cmc").getAsDouble();
+                            if (cmc >= 7 && "vintage".equals(format)) {
+                                // realistically, in a VRD, almost nobody is hardcasting 7 drops. 6 drops, yeah once
+                                // in a while. so assume that anything 7 or up is a cheat target
+                                colorCategory = "";
+                            } else {
+                                colorCategory = colorCategoryFromManaCost(manaCost);
+                            }
                         }
-                        String setCode = cardJson.get("set").getAsString();
-                        output.add(new Card(cardName, colorCategory, setCode));
+                    } catch (Exception e) {
+                        throw new RuntimeException("problem determining color for card: " + cardName, e);
                     }
+
+                    String setCode = cardJson.get("set").getAsString();
+                    output.add(new Card(cardName, colorCategory, setCode));
                 }
             }
         }
@@ -203,6 +220,28 @@ public class Rotobot {
         cardsLowerToCaps = newCapsMap;
         // return value contains only cards legal in this format
         return output;
+    }
+
+
+    // specifically avoid counting phyrexian or hybrid mana
+    private static String colorCategoryFromManaCost(String manaCost) {
+        StringBuilder builder = new StringBuilder();
+        if (manaCost.contains("{W}")) {
+            builder.append("W");
+        }
+        if (manaCost.contains("{U}")) {
+            builder.append("U");
+        }
+        if (manaCost.contains("{B}")) {
+            builder.append("B");
+        }
+        if (manaCost.contains("{R}")) {
+            builder.append("R");
+        }
+        if (manaCost.contains("{G}")) {
+            builder.append("G");
+        }
+        return builder.toString();
     }
 
     private static boolean meldCardIsBackSide(JsonObject cardJson, String cardName) {
