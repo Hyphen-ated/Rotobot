@@ -2,7 +2,7 @@
 
 Set up your discord bot in the discord api: https://jda.wiki/using-jda/getting-started/
 
-It needs privileged gateway intents: Message Content Intent, Read Messages/View Channels, Manage Messages
+It needs privileged gateway intents: Message Content Intent, Read Messages/View Channels, Manage Messages, Pin Messages
 
 To join it to your server, be on https://discord.com/developers/applications/, go to OAuth2 -> URL Generator, pick "bot" and "applications.commands" and then visit that url.
 

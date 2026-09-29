@@ -109,11 +109,12 @@ public class Rotobot {
 
     public synchronized static List<Card> getLegalCardsAndUpdateCapsMap(@Nullable String format) throws Exception {
         Gson gson = new Gson();
-
         if (! Files.exists(Path.of(Config.SCRYFALL_DEFAULT_CARDS_PATH))) {
             logger.warn("There's no scryfall jsonl file so we don't have card data");
             return new ArrayList<>();
         }
+
+        logger.info("Processing scryfall jsonl...");
 
         ConcurrentHashMap<String, String> newCapsMap = new ConcurrentHashMap<>();
         List<Card> output = new ArrayList<>(30000);
