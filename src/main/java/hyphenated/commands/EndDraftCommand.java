@@ -1,10 +1,8 @@
 package hyphenated.commands;
 
-import hyphenated.Config;
 import hyphenated.Draft;
 import hyphenated.Rotobot;
 import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
@@ -45,7 +43,7 @@ public class EndDraftCommand extends ListenerAdapter {
                 return "I don't see a draft happening in this channel";
             }
 
-            Rotobot.jsonDAO.deleteDraft(sheetId);
+            Rotobot.draftJsonDAO.deleteDraft(sheetId);
             Rotobot.drafts.remove(channelId);
             return "Ended the draft in this channel. ( " + Rotobot.formatSheetUrl(sheetId) + " )";
         } catch (Exception e) {

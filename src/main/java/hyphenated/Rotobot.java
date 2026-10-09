@@ -39,7 +39,7 @@ public class Rotobot {
     // key: channel id
     public static final ConcurrentHashMap<String, Draft> drafts = new ConcurrentHashMap<>();
 
-    public static JsonDAO jsonDAO = new JsonDAO();
+    public static DraftJsonDAO draftJsonDAO = new DraftJsonDAO();
 
     public static void main(String[] args) throws Exception {
         getLegalCardsAndUpdateCapsMap(null);
@@ -270,7 +270,7 @@ public class Rotobot {
     }
 
     private static void readAllDraftSheets() throws Exception{
-        for(DraftJson draftJson : jsonDAO.getDraftJsons()) {
+        for(DraftJson draftJson : draftJsonDAO.getDraftJsons()) {
             Draft draft = GSheets.readFromSheet(draftJson.sheetId);
             drafts.put(draft.channelId, draft);
         }

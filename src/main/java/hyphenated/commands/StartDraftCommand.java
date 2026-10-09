@@ -158,7 +158,7 @@ public class StartDraftCommand extends ListenerAdapter {
             draftJson.sheetId = newSheetId;
             draftJson.name = draftName;
             draftJson.preloads = new HashMap<>();
-            Rotobot.jsonDAO.setDraft(draftJson);
+            Rotobot.draftJsonDAO.setDraft(draftJson);
 
             HashSet<String> legalCardNameSet = new HashSet<>(legalCards.size());
             for (Card card : legalCards) {

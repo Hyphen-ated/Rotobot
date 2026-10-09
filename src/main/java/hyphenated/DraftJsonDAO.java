@@ -14,9 +14,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class JsonDAO {
+public class DraftJsonDAO {
     private Gson gson;
-    public JsonDAO() {
+    public DraftJsonDAO() {
         GsonBuilder gsonBuilder = new GsonBuilder();
         gsonBuilder = gsonBuilder.setPrettyPrinting();
         gson = gsonBuilder.create();

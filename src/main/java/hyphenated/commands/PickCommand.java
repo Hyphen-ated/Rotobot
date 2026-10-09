@@ -15,7 +15,6 @@ import net.dv8tion.jda.api.utils.messages.MessageCreateData;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -108,7 +107,7 @@ public class PickCommand extends ListenerAdapter {
 
         DraftJson draftJson;
         try {
-            draftJson = Rotobot.jsonDAO.getDraftJsonBySheetId(draft.sheetId);
+            draftJson = Rotobot.draftJsonDAO.getDraftJsonBySheetId(draft.sheetId);
         } catch (Exception e) {
             String msg = "Error while trying to load draft info from local disk";
             logger.error(msg, e);
@@ -295,7 +294,7 @@ public class PickCommand extends ListenerAdapter {
 
         String maybeError = "";
         try {
-            Rotobot.jsonDAO.setDraft(draftJson);
+            Rotobot.draftJsonDAO.setDraft(draftJson);
         } catch (Exception e) {
             String msg = " -- Error while trying to write processed preloads to disk. but the sheet was edited. ping hyphenated";
             logger.error(msg, e);

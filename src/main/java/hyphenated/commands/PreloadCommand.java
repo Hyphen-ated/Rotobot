@@ -2,7 +2,6 @@ package hyphenated.commands;
 
 import hyphenated.Draft;
 import hyphenated.GSheets;
-import hyphenated.JsonDAO;
 import hyphenated.Rotobot;
 import hyphenated.json.DraftJson;
 import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent;
@@ -52,7 +51,7 @@ public class PreloadCommand extends ListenerAdapter {
 
         DraftJson draftJson;
         try {
-            draftJson = Rotobot.jsonDAO.getDraftJsonBySheetId(draft.sheetId);
+            draftJson = Rotobot.draftJsonDAO.getDraftJsonBySheetId(draft.sheetId);
         } catch (Exception e) {
             String msg = "Error while trying to load draft info from local disk";
             logger.error(msg, e);
@@ -108,7 +107,7 @@ public class PreloadCommand extends ListenerAdapter {
 
         try {
             String userTag = event.getUser().getAsTag();
-            Rotobot.jsonDAO.setPlayerPreload(draft.sheetId, userTag, formattedPreloadNames);
+            Rotobot.draftJsonDAO.setPlayerPreload(draft.sheetId, userTag, formattedPreloadNames);
             if (draftJson.preloads == null) {
                 draftJson.preloads = new HashMap<>();
             }
