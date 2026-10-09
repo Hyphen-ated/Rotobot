@@ -198,7 +198,10 @@ public class PickCommand extends ListenerAdapter {
         cardsToSend.add(firstSendRow);
         firstSendRow.set(firstChangedSeat-1, card);
 
-        @Nullable String nextPlayerId = null;
+        // current user has just picked, so if they somehow had any preloads, which they shouldn't have been able to, clear them
+        draftJson.preloads.put(usertag, Collections.emptyList());
+
+        @Nullable String playerIdToPing = null;
         if (laterCellsArePopulated) {
             message.append("\nThere are unexpected picks already placed AFTER this. Double-check the sheet.");
         } else {
@@ -221,27 +224,35 @@ public class PickCommand extends ListenerAdapter {
                 if (playerPreloads == null || playerPreloads.isEmpty()) {
                     // they have no preload, so we're done with preloads
                     // figure out who to ping, if anyone
+
+                    // prevSeat != seat is checking "did they just make the first pick of a doublepick"
+                    // if they are, we don't need to ping them, they know they're a doublepicker
+
+                    // BUT it's possible for a doublepicker to make a single preload.
+                    // if they did that, then we DO want to ping them. so always ping someone if preloads happened
                     int prevSeat = pickOrder[i-1];
-                    if (prevSeat != seat) {
-                        nextPlayerId = preloaderId;
+                    if (prevSeat != seat || preloadsProcessed > 0) {
+                        playerIdToPing = preloaderId;
                     }
                     break;
                 } else {
+                    // fire this preload
                     String preloadCardGiven = playerPreloads.remove(0);
                     String preloadLower = Rotobot.simplifyName(preloadCardGiven);
                     String preloadCard = Rotobot.cardsLowerToCaps.get(preloadLower);
+                    // set playerIdToPing to null in these failure cases because we are pinging them inside the message right here.
                     if (StringUtils.isBlank(preloadCard)) {
-                        nextPlayerId = null;
+                        playerIdToPing = null;
                         message.append("\n<@" + preloaderId + "> preloaded \"" + preloadLower + "\" but now I don't recognize it as a magic card in the scryfall data (???)");
                         break;
                     }
                     if (!draft.legalCardsTrie.containsKey(preloadLower)) {
-                        nextPlayerId = null;
+                        playerIdToPing = null;
                         message.append("\n<@" + preloaderId + "> preloaded \"" + preloadCard + "\" but it isn't legal in this draft (???)");
                         break;
                     }
                     if (draft.pickedCards.contains(preloadLower)) {
-                        nextPlayerId = null;
+                        playerIdToPing = null;
                         message.append("\n<@" + preloaderId + "> preloaded \"" + preloadCard + "\" but it's been taken");
                         playerPreloads.clear(); //all their preloads are now invalid if they got sniped
                         break;
@@ -282,9 +293,6 @@ public class PickCommand extends ListenerAdapter {
             return msg;
         }
 
-        // current user has just picked, so if they somehow had any preloads, which they shouldn't have been able to, clear them
-        draftJson.preloads.put(usertag, Collections.emptyList());
-
         String maybeError = "";
         try {
             Rotobot.jsonDAO.setDraft(draftJson);
@@ -297,8 +305,8 @@ public class PickCommand extends ListenerAdapter {
         String sheetLink = "[sheet](<" + Rotobot.formatSheetUrl(draft.sheetId) + ">)";
 
         String suffix = "";
-        if(!StringUtils.isBlank(nextPlayerId)) {
-            suffix = " (next up: <@" + nextPlayerId + ">)";
+        if(!StringUtils.isBlank(playerIdToPing)) {
+            suffix = " (next up: <@" + playerIdToPing + ">)";
         }
         if (!Config.PROD) {
             suffix += "(test: you are <@" + pickingPlayer.discordId + ">)";
