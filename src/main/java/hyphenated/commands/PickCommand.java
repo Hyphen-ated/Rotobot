@@ -282,6 +282,9 @@ public class PickCommand extends ListenerAdapter {
             return msg;
         }
 
+        // current user has just picked, so if they somehow had any preloads, which they shouldn't have been able to, clear them
+        draftJson.preloads.put(usertag, Collections.emptyList());
+
         String maybeError = "";
         try {
             Rotobot.jsonDAO.setDraft(draftJson);
