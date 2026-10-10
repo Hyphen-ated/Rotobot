@@ -40,6 +40,7 @@ public class Rotobot {
     public static final ConcurrentHashMap<String, Draft> drafts = new ConcurrentHashMap<>();
 
     public static DraftJsonDAO draftJsonDAO = new DraftJsonDAO();
+    public static QueueJsonDAO queueJsonDAO = new QueueJsonDAO();
 
     public static void main(String[] args) throws Exception {
         getLegalCardsAndUpdateCapsMap(null);
@@ -52,6 +53,7 @@ public class Rotobot {
                         new PickCommand(),
                         new PreloadCommand(),
                         new UpdateScryfallCommand(),
+                        new QueueCommands(),
                         new MoxfieldListener())
                 .build();
 
@@ -85,6 +87,17 @@ public class Rotobot {
                         .addOption(OptionType.STRING, "card6", "Card to preload next", false, true),
 
                 Commands.slash(UpdateScryfallCommand.CMD, "Download the latest scryfall data")
+                        .setDefaultPermissions(DefaultMemberPermissions.DISABLED),
+                Commands.slash(QueueCommands.QUEUE_CMD, "List the signup queue in the current channel"),
+                Commands.slash(QueueCommands.IN_CMD, "Sign up for the draft queue in the current channel"),
+                Commands.slash(QueueCommands.OUT_CMD, "Quit the draft queue in the current channel"),
+                Commands.slash(QueueCommands.QUEUE_ADD_CMD, "Mod command to add someone else to the queue in the current channel")
+                        .addOption(OptionType.USER, "user", "user to be added to the queue", true)
+                        .setDefaultPermissions(DefaultMemberPermissions.DISABLED),
+                Commands.slash(QueueCommands.QUEUE_REMOVE_CMD, "Mod command to remove someone else from the queue in the current channel")
+                        .addOption(OptionType.USER, "user", "user to be removed from the queue", true)
+                        .setDefaultPermissions(DefaultMemberPermissions.DISABLED),
+                Commands.slash(QueueCommands.QUEUE_CLEAR_CMD, "Clear the queue in the current channel")
                         .setDefaultPermissions(DefaultMemberPermissions.DISABLED)
         ).queue();
 
