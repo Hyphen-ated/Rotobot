@@ -10,11 +10,11 @@ public class QueueJson {
     }
 
     public static class QueueEntry {
-        public String userTag;
+        public String userId;
         public long signupTimeSeconds;
 
-        public QueueEntry(String userTag, long signupTimeSeconds) {
-            this.userTag = userTag;
+        public QueueEntry(String userId, long signupTimeSeconds) {
+            this.userId = userId;
             this.signupTimeSeconds = signupTimeSeconds;
         }
     }

@@ -53,7 +53,7 @@ public class QueueCommands extends ListenerAdapter {
                 }
             }
 
-            String userTag = event.getUser().getAsTag();
+            String userId = event.getUser().getId();
             if (QUEUE_CMD.equals(cmd)) {
                List<QueueJson.QueueEntry> entries =  Rotobot.queueJsonDAO.getQueue(channelId);
                if (entries == null || entries.isEmpty()) {
@@ -70,29 +70,35 @@ public class QueueCommands extends ListenerAdapter {
                    } else if (secDiff >= 172800) {
                        timeLabel = "(" + secDiff / 86400 + " days)";
                    }
-                   msg.append(i + ": " + entry.userTag + " " + timeLabel + "\n");
+                   msg.append(i + ": <@" + entry.userId + "> " + timeLabel + "\n");
                    ++i;
                }
                return msg.toString();
 
             } else if (IN_CMD.equals(cmd)) {
-                int size = Rotobot.queueJsonDAO.addUser(channelId, userTag);
+                int size = Rotobot.queueJsonDAO.addUser(channelId, userId);
                 return "You're in! The queue is at " + size;
             } else if (OUT_CMD.equals(cmd)) {
-                int size = Rotobot.queueJsonDAO.removeUser(channelId, userTag);
+                if (!Rotobot.queueJsonDAO.userIsQueued(channelId, userId)) {
+                    return "You're not in this queue";
+                }
+                int size = Rotobot.queueJsonDAO.removeUser(channelId, userId);
                 return "Seeya. The queue is at " + size;
             } else if (QUEUE_ADD_CMD.equals(cmd)) {
                 OptionMapping mapping = event.getOption("user");
                 User user = mapping.getAsUser();
-                String targetTag = user.getAsTag();
-                int size = Rotobot.queueJsonDAO.addUser(channelId, targetTag);
-                return "Added " + targetTag + ". The queue is at " + size;
+                String targetId = user.getId();
+                int size = Rotobot.queueJsonDAO.addUser(channelId, targetId);
+                return "Added <@" + targetId + ">. The queue is at " + size;
             } else if (QUEUE_REMOVE_CMD.equals(cmd)) {
                 OptionMapping mapping = event.getOption("user");
                 User user = mapping.getAsUser();
-                String targetTag = user.getAsTag();
-                int size = Rotobot.queueJsonDAO.removeUser(channelId, targetTag);
-                return "Removed " + targetTag + ". The queue is at " + size;
+                String targetId = user.getId();
+                if (!Rotobot.queueJsonDAO.userIsQueued(channelId, targetId)) {
+                    return "They're not in this queue";
+                }
+                int size = Rotobot.queueJsonDAO.removeUser(channelId, targetId);
+                return "Removed <@" + targetId + ">. The queue is at " + size;
             } else if (QUEUE_CLEAR_CMD.equals(cmd)) {
                 Rotobot.queueJsonDAO.clearChannel(channelId);
                 return "Cleared the queue";

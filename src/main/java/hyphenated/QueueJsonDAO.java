@@ -26,16 +26,23 @@ public class QueueJsonDAO {
         return queues;
     }
 
+    // todo this wastefully reads the file twice, if it ever starts to matter
+    // then we need to read the json once only per command
+    public synchronized boolean userIsQueued(String channelId, String userId) throws Exception {
+        List<QueueJson.QueueEntry> queue = getQueue(channelId);
+        for (QueueJson.QueueEntry entry : queue) {
+            if (entry.userId.equals(userId)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public synchronized List<QueueJson.QueueEntry> getQueue(String channelId) throws Exception {
         return getQueues().signupQueuesByChannelId.get(channelId);
     }
 
-    public synchronized @Nullable List<QueueJson.QueueEntry> getUserIds(String channelId) throws Exception {
-        QueueJson queues = getQueues();
-        return queues.signupQueuesByChannelId.get(channelId);
-    }
-
-    public synchronized int addUser(String channelId, String userTag) throws Exception {
+    public synchronized int addUser(String channelId, String userId) throws Exception {
         QueueJson queues = getQueues();
         List<QueueJson.QueueEntry> queue = queues.signupQueuesByChannelId.get(channelId);
         if (queue == null) {
@@ -44,26 +51,26 @@ public class QueueJsonDAO {
         }
         boolean presentAlready = false;
         for (QueueJson.QueueEntry entry : queue) {
-            if (entry.userTag.equals(userTag)) {
+            if (entry.userId.equals(userId)) {
                 entry.signupTimeSeconds = System.currentTimeMillis() / 1000;
                 presentAlready = true;
             }
         }
         if (!presentAlready) {
-            queue.add(new QueueJson.QueueEntry(userTag, System.currentTimeMillis() / 1000));
+            queue.add(new QueueJson.QueueEntry(userId, System.currentTimeMillis() / 1000));
         }
         writeQueueJsons(queues);
         return queue.size();
     }
 
-    public synchronized int removeUser(String channelId, String userTag) throws Exception {
+    public synchronized int removeUser(String channelId, String userId) throws Exception {
         QueueJson queues = getQueues();
         List<QueueJson.QueueEntry> queue = queues.signupQueuesByChannelId.get(channelId);
         if (queue == null) {
             return 0;
         }
         for (QueueJson.QueueEntry entry : queue) {
-            if (entry.userTag.equals(userTag)) {
+            if (entry.userId.equals(userId)) {
                 queue.remove(entry);
                 break;
             }
