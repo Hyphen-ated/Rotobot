@@ -8,8 +8,11 @@ import net.dv8tion.jda.api.entities.channel.attribute.ICategorizableChannel;
 import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
 import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
+import net.dv8tion.jda.api.interactions.components.ActionRow;
+import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,6 +27,8 @@ public class QueueCommands extends ListenerAdapter {
     public static final String QUEUE_REMOVE_CMD = "queue-remove";
     public static final String QUEUE_CLEAR_CMD = "queue-clear";
 
+    public static final String IN_BUTTON = "in-button";
+
     Set<String> CMDS = Set.of(QUEUE_CMD, IN_CMD, OUT_CMD, QUEUE_ADD_CMD, QUEUE_REMOVE_CMD, QUEUE_CLEAR_CMD);
 
     private static final Logger logger = LoggerFactory.getLogger(QueueCommands.class);
@@ -31,7 +36,10 @@ public class QueueCommands extends ListenerAdapter {
         if (CMDS.contains(event.getName())) {
             event.deferReply().queue();
             String reply = handleAndMakeReply(event);
-            event.getHook().sendMessage(reply).queue();
+            event.getHook().sendMessage(reply)
+                .addComponents(ActionRow.of(
+                    Button.primary(IN_BUTTON, "Sign Me Up")))
+                .queue();
         }
     }
 
@@ -110,6 +118,24 @@ public class QueueCommands extends ListenerAdapter {
             return msg;
         }
         return "unhandled queue command, oops";
+    }
+
+    @Override
+    public void onButtonInteraction(ButtonInteractionEvent event) {
+        try {
+            if (event.getComponentId().equals(IN_BUTTON)) {
+                String channelId = event.getMessageChannel().getId();
+                String userId = event.getUser().getId();
+                int size = Rotobot.queueJsonDAO.addUser(channelId, userId);
+                event.reply("<@" + userId + "> is in! The queue is at " + size)
+                    .addComponents(ActionRow.of(
+                        Button.primary(IN_BUTTON, "Sign Me Up")))
+                    .queue(); // send a message in the channel
+            }
+        } catch (Exception e) {
+            String msg = "Unexpected error while trying to handle /in button";
+            logger.error(msg, e);
+        }
     }
 
 
