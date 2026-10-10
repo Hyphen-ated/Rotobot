@@ -191,7 +191,7 @@ public class StartDraftCommand extends ListenerAdapter {
             Message firstMessage = channel.sendMessage(firstMcd).complete();
             firstMessage.pin().queue();
 
-            Rotobot.queueJsonDAO.clearChannel(channelId);
+            Rotobot.queueJsonDAO.clearChannel(event.getChannel().getId());
 
             String reply = "Draft created in <#" +channelId + ">";
             MessageCreateData mcd = new MessageCreateBuilder()
