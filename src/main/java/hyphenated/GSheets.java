@@ -19,12 +19,17 @@ import com.google.api.services.sheets.v4.Sheets;
 import com.google.api.services.sheets.v4.SheetsScopes;
 import com.google.api.services.sheets.v4.model.*;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 public class GSheets {
+    private static final Logger logger = LoggerFactory.getLogger(GSheets.class);
+
     private static final String APPLICATION_NAME = "Rotobot";
     private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
     private static final String TOKENS_DIRECTORY_PATH = "tokens";
@@ -211,14 +216,29 @@ public class GSheets {
                                                       List<String> playerIds,
                                                       List<Card> legalCards) throws Exception {
         final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
-        Drive driveService = new Drive.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
-                .setApplicationName(APPLICATION_NAME)
-                .build();
+        int retryLimit = 4;
+        com.google.api.services.drive.model.File resp = null;
+        Drive driveService = null;
+        int[] retryBackoffs = {2, 5, 10, 20};
+        // todo: also retry all other sheet writes, not just this initial copy?
+        for (int i = 0; i < retryLimit; ++i) {
+            try {
+                driveService = new Drive.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
+                        .setApplicationName(APPLICATION_NAME)
+                        .build();
 
-        com.google.api.services.drive.model.File nonUpdate = new com.google.api.services.drive.model.File();
-        nonUpdate.setName(draftName);
-        com.google.api.services.drive.model.File resp = driveService.files().copy(templateId, nonUpdate).execute();
-
+                com.google.api.services.drive.model.File nonUpdate = new com.google.api.services.drive.model.File();
+                nonUpdate.setName(draftName);
+                resp = driveService.files().copy(templateId, nonUpdate).execute();
+            } catch (Exception e) {
+                int delay = retryBackoffs[i];
+                logger.warn("Exception from google drive api when creating sheet, sleeping then retrying", e);
+                TimeUnit.SECONDS.sleep(delay);
+            }
+        }
+        if (resp == null) {
+            throw new Exception("Retry limit exceeded for creating the google sheet (see above warnings)");
+        }
         String destinationSpreadsheetId = resp.getId();
 
         Sheets service =
