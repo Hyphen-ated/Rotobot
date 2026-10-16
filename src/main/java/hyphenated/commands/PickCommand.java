@@ -15,6 +15,7 @@ import net.dv8tion.jda.api.utils.messages.MessageCreateData;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -167,7 +168,7 @@ public class PickCommand extends ListenerAdapter {
                 firstChangedRow = row;
                 firstChangedSeat = seat;
                 draft.pickedCards.add(cardLower);
-                draft.picks.get(seat-1).add(card);
+                draft.picks.get(seat-1).add(cardLower);
                 message.append(username + " picks [" + card + "](" + scryfallUrl(card) + ")");
 
                 break;
@@ -252,7 +253,16 @@ public class PickCommand extends ListenerAdapter {
                     }
                     if (draft.pickedCards.contains(preloadLower)) {
                         playerIdToPing = null;
-                        message.append("\n<@" + preloaderId + "> preloaded \"" + preloadCard + "\" but it's been taken");
+                        String sniperName = "someone";
+                        for (int sniperSeat = 0; sniperSeat < 8; ++sniperSeat) {
+                            List<String> otherPlayerPicks = draft.picks.get(sniperSeat);
+                            if (otherPlayerPicks.contains(preloadLower)) {
+                                String sniperTag = draft.players.get(sniperSeat);
+                                sniperName = stripHashSuffix(sniperTag);
+                                break;
+                            }
+                        }
+                        message.append("\n<@" + preloaderId + "> preloaded \"" + preloadCard + "\" but " + sniperName + " sniped it");
                         playerPreloads.clear(); //all their preloads are now invalid if they got sniped
                         break;
                     }
@@ -260,7 +270,8 @@ public class PickCommand extends ListenerAdapter {
                     draft.picks.get(seat-1).add(preloadCard);
                     currentRow.set(seat-1, preloadCard);
                     ++preloadsProcessed;
-                    message.append("\n" + preloaderTag + " preloaded [" + preloadCard + "](" + scryfallUrl(preloadCard) + ")");
+                    String preloaderTagDisplay = stripHashSuffix(preloaderTag);
+                    message.append("\n" + preloaderTagDisplay + " preloaded [" + preloadCard + "](" + scryfallUrl(preloadCard) + ")");
                 }
             }
         }
@@ -312,6 +323,14 @@ public class PickCommand extends ListenerAdapter {
         }
 
         return message + suffix + " (" + sheetLink + ")" + maybeError;
+    }
+
+    @NotNull
+    private static String stripHashSuffix(String userTag) {
+        if (userTag.endsWith("#0000")) {
+            return userTag.substring(0, userTag.length() - 5);
+        }
+        return userTag;
     }
 
     private static String cellCoord(int seat, int row) {

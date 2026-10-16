@@ -18,7 +18,7 @@ public class Draft {
     // player names are discord "tags" e.g. Alice#1234
     public LinkedMap<String, Player> players = new LinkedMap<>(8);
     // list of 8 lists, one for each player's picks.
-    // card names capitalized properly
+    // card names all lowercase
     public List<List<String>> picks;
     // optimization so autocomplete can be faster with just one lookup. redundant with the cards in "picks" above.
     // card names all lowercase
