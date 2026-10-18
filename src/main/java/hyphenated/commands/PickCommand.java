@@ -267,7 +267,7 @@ public class PickCommand extends ListenerAdapter {
                         break;
                     }
                     draft.pickedCards.add(preloadLower);
-                    draft.picks.get(seat-1).add(preloadCard);
+                    draft.picks.get(seat-1).add(preloadLower);
                     currentRow.set(seat-1, preloadCard);
                     ++preloadsProcessed;
                     String preloaderTagDisplay = stripHashSuffix(preloaderTag);
