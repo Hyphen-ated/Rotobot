@@ -225,7 +225,19 @@ public class Rotobot {
                     }
 
                     String setCode = cardJson.get("set").getAsString();
-                    output.add(new Card(cardName, colorCategory, setCode));
+                    JsonElement imageUris = cardJson.get("image_uris");
+                    String imageUrl = "";
+                    if (imageUris == null) {
+                        JsonElement cardFaces = cardJson.get("card_faces");
+                        if (cardFaces != null) {
+                            JsonElement cardFace = cardFaces.getAsJsonArray().get(0);
+                            imageUris = cardFace.getAsJsonObject().get("image_uris");
+                        }
+                    }
+                    if (imageUris != null) {
+                        imageUrl = imageUris.getAsJsonObject().get("normal").getAsString();
+                    }
+                    output.add(new Card(cardName, colorCategory, setCode, imageUrl));
                 }
             }
         }
