@@ -1,0 +1,20 @@
+# this goes at /etc/systemd/service/rotobot.service on prod
+
+[Unit]
+Description=Rotobot
+After=syslog.target network.target
+
+[Service]
+SuccessExitStatus=143
+
+User=hyphen
+Group=hyphen
+
+Type=simple
+
+WorkingDirectory=/home/hyphen/rotobot/
+ExecStart=/home/hyphen/rotobot/runIt.sh
+ExecStop=/bin/kill -15 $MAINPID
+
+[Install]
+WantedBy=multi-user.target
