@@ -164,14 +164,21 @@ public class PickCommand extends ListenerAdapter {
 
         String param = mapping.getAsString();
         String card = Rotobot.cardsLowerToCaps.get(Rotobot.simplifyName(param));
-        String cardLower = Rotobot.simplifyName(card);
+        if (StringUtils.isBlank(card)) {
+            return Responses.privateMsg("I don't recognize \"" + param + "\" as a magic card in the scryfall data");
+        }
         cardParamsUpper.add(card);
+        String cardLower = Rotobot.simplifyName(card);
+
 
         for (int i = 2; i <= 6; ++i) {
             OptionMapping preloadMapping = event.getOption("card" + i);
             if (preloadMapping != null) {
                 String preloadParam = preloadMapping.getAsString();
                 String preloadCard = Rotobot.cardsLowerToCaps.get(Rotobot.simplifyName(preloadParam));
+                if (StringUtils.isBlank(preloadCard)) {
+                    return Responses.privateMsg("I don't recognize \"" + preloadParam + "\" as a magic card in the scryfall data");
+                }
                 cardParamsUpper.add(preloadCard);
             }
         }
@@ -179,9 +186,6 @@ public class PickCommand extends ListenerAdapter {
         Set<String> cardsSeenInThisPick = new HashSet<>();
         for (String card_i : cardParamsUpper) {
 
-            if (StringUtils.isBlank(card_i)) {
-                return Responses.privateMsg("I don't recognize \"" + card_i + "\" as a magic card in the scryfall data");
-            }
             String card_i_lower = Rotobot.simplifyName(card_i);
             if (!draft.legalCardsTrie.containsKey(card_i_lower)) {
                 return Responses.privateMsg(card_i + " isn't legal in this draft");
