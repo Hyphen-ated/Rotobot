@@ -75,9 +75,6 @@ public class DraftJsonDAO {
         List<DraftJson> drafts = getDraftJsons();
         for (DraftJson draft : drafts) {
             if (sheetId.equals(draft.sheetId)) {
-                if (draft.preloads == null) {
-                    draft.preloads = new HashMap<>();
-                }
                 draft.preloads.put(playerTag, picks);
             }
         }

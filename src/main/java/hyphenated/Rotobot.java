@@ -16,6 +16,7 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
+import net.dv8tion.jda.api.interactions.commands.build.SubcommandData;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.gcardone.junidecode.Junidecode;
 import org.apache.commons.lang3.StringUtils;
@@ -51,6 +52,7 @@ public class Rotobot {
                         new StartDraftCommand(),
                         new EndDraftCommand(),
                         new PickCommand(),
+                        new PreloadsCommand(),
                         new PreloadCommand(),
                         new UpdateScryfallCommand(),
                         new QueueCommands(),
@@ -74,17 +76,20 @@ public class Rotobot {
                 Commands.slash(EndDraftCommand.CMD, "End the draft in the current channel"),
 
                 Commands.slash(PickCommand.CMD, "Picks a card in the current draft")
-                        .addOption(OptionType.STRING, "card", "The card to pick", true, true),
-
-                Commands.slash(PreloadCommand.CMD, "Preload one or more cards, replacing any existing preloads")
-                        .addOption(OptionType.STRING, "card", "Card to preload. \""
-                                + PreloadCommand.NONE_SUBCOMMAND + "\" to erase your preloads. \""
-                                + PreloadCommand.LIST_SUBCOMMAND + "\" to view your current ones.", true, true)
+                        .addOption(OptionType.STRING, "card", "Card to pick/preload", true, true)
                         .addOption(OptionType.STRING, "card2", "Card to preload next", false, true)
                         .addOption(OptionType.STRING, "card3", "Card to preload next", false, true)
                         .addOption(OptionType.STRING, "card4", "Card to preload next", false, true)
                         .addOption(OptionType.STRING, "card5", "Card to preload next", false, true)
                         .addOption(OptionType.STRING, "card6", "Card to preload next", false, true),
+
+                Commands.slash(PreloadCommand.CMD, "Stub for old command. Use /pick now to do preloads")
+                                .addOption(OptionType.STRING, "stub", "just so you don't accidentally reveal your plans"),
+
+                Commands.slash(PreloadsCommand.CMD, "Preload one or more cards, replacing any existing preloads")
+                        .addSubcommands(
+                            new SubcommandData(PreloadsCommand.LIST_SUBCOMMAND, "List your current preloads"),
+                            new SubcommandData(PreloadsCommand.CLEAR_SUBCOMMAND, "Clear your preload")),
 
                 Commands.slash(UpdateScryfallCommand.CMD, "Download the latest scryfall data")
                         .setDefaultPermissions(DefaultMemberPermissions.DISABLED),

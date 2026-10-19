@@ -64,20 +64,54 @@ public class PickCommand extends ListenerAdapter {
         }
         int x=0;
     }
+
+    private static class Responses {
+        @Nullable public String publicReply;
+        @NotNull public String ephemeralReply;
+
+        public Responses() {
+        }
+
+        public static Responses publicMsg(String publicReply) {
+            Responses r = new Responses();
+            r.publicReply = publicReply;
+            r.ephemeralReply = "Done";
+            return r;
+        }
+
+        public static Responses privateMsg(String ephemeralReply) {
+            Responses r = new Responses();
+            r.publicReply = null;
+            r.ephemeralReply = ephemeralReply;
+            return r;
+        }
+
+        public static Responses msg(String ephemeralReply, String publicReply) {
+            Responses r = new Responses();
+            r.publicReply = publicReply;
+            r.ephemeralReply = ephemeralReply;
+            return r;
+        }
+
+    }
     @Override
     public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
         if (event.getName().equals(CMD)) {
             InteractionHook hook = event.getHook();
             event.deferReply(true).queue();
 
-            // send a followup message later because editing the initial deferral reply doesn't allow mentions
-            String reply = handleAndMakeReply(event);
-            MessageCreateData mcd = new MessageCreateBuilder()
-                    .setContent(reply)
-                    .setAllowedMentions(userMentions)
-                    .build();
-            hook.sendMessage("Done").queue();
-            hook.sendMessage(mcd).queue();
+            // we have two replies, an ephemeral one that only the picker sees, and a public one.
+            // the ephemeral one may contain their secret preloads
+            Responses responses = handleAndMakeReply(event);
+            hook.sendMessage(responses.ephemeralReply).queue();
+
+            if (responses.publicReply != null) {
+                MessageCreateData mcd = new MessageCreateBuilder()
+                        .setContent(responses.publicReply)
+                        .setAllowedMentions(userMentions)
+                        .build();
+                hook.sendMessage(mcd).queue();
+            }
         }
     }
 
@@ -89,12 +123,14 @@ public class PickCommand extends ListenerAdapter {
         return playerPicks.get(row);
     }
 
-    public synchronized String handleAndMakeReply(SlashCommandInteractionEvent event) {
+    private synchronized Responses handleAndMakeReply(SlashCommandInteractionEvent event) {
         String channelId = event.getMessageChannel().getId();
         Draft draft = Rotobot.drafts.get(channelId);
+        String username = event.getUser().getName();
+        String usertag = event.getUser().getAsTag();
 
         if (draft == null) {
-            return "I don't know of a draft happening in this channel";
+            return Responses.publicMsg("I don't know of a draft happening in this channel");
         }
         try {
             // update the draft from the sheet to make sure it's all fresh
@@ -103,7 +139,11 @@ public class PickCommand extends ListenerAdapter {
         } catch (Exception e) {
             String msg = "Unexpected error while refreshing the sheet before your pick";
             logger.error(msg, e);
-            return msg;
+            return Responses.publicMsg(msg);
+        }
+
+        if (!draft.players.containsKey(usertag)) {
+            return Responses.publicMsg(username + ", you're not in this draft");
         }
 
         DraftJson draftJson;
@@ -112,35 +152,47 @@ public class PickCommand extends ListenerAdapter {
         } catch (Exception e) {
             String msg = "Error while trying to load draft info from local disk";
             logger.error(msg, e);
-            return msg;
+            return Responses.publicMsg(msg);
         }
 
         OptionMapping mapping = event.getOption("card");
-        String card;
-        String cardLower;
         if (mapping == null) {
-            return "I couldn't get the card parameter from discord (???)";
-        } else {
-            String param = mapping.getAsString();
-            card = Rotobot.cardsLowerToCaps.get(Rotobot.simplifyName(param));
-            if (StringUtils.isBlank(card)) {
-                return "I don't recognize " + param + " as a magic card in the scryfall data";
-            }
-            cardLower = Rotobot.simplifyName(card);
+            return Responses.publicMsg("I couldn't get the card parameter from discord (???)");
         }
 
-        if (StringUtils.isBlank(card)) {
-            return "You need to pick a card";
-        } else if (!draft.legalCardsTrie.containsKey(cardLower)) {
-            return card + " isn't legal in this draft";
-        } else if (draft.pickedCards.contains(cardLower)) {
-            return card + " was already picked";
+        List<String> cardParamsUpper = new ArrayList<>(6);
+
+        String param = mapping.getAsString();
+        String card = Rotobot.cardsLowerToCaps.get(Rotobot.simplifyName(param));
+        String cardLower = Rotobot.simplifyName(card);
+        cardParamsUpper.add(card);
+
+        for (int i = 2; i <= 6; ++i) {
+            OptionMapping preloadMapping = event.getOption("card" + i);
+            if (preloadMapping != null) {
+                String preloadParam = preloadMapping.getAsString();
+                String preloadCard = Rotobot.cardsLowerToCaps.get(Rotobot.simplifyName(preloadParam));
+                cardParamsUpper.add(preloadCard);
+            }
         }
-        String username = event.getUser().getName();
-        String usertag = event.getUser().getAsTag();
-        if (!draft.players.containsKey(usertag)) {
-            return username + ", you're not in this draft";
+
+        Set<String> cardsSeenInThisPick = new HashSet<>();
+        for (String card_i : cardParamsUpper) {
+
+            if (StringUtils.isBlank(card_i)) {
+                return Responses.privateMsg("I don't recognize \"" + card_i + "\" as a magic card in the scryfall data");
+            }
+            String card_i_lower = Rotobot.simplifyName(card_i);
+            if (!draft.legalCardsTrie.containsKey(card_i_lower)) {
+                return Responses.privateMsg(card_i + " isn't legal in this draft");
+            } else if (draft.pickedCards.contains(card_i_lower)) {
+                return Responses.privateMsg(card_i + " was already picked");
+            } else if (cardsSeenInThisPick.contains(card_i)) {
+                return Responses.privateMsg("You can't pick " + card_i + " twice");
+            }
+            cardsSeenInThisPick.add(card_i);
         }
+
         Draft.Player pickingPlayer = draft.players.get(usertag);
 
         int[] pickOrder;
@@ -149,9 +201,10 @@ public class PickCommand extends ListenerAdapter {
         } else if (draft.snakeStyle == SnakeStyle.NYC) {
             pickOrder = nycPickOrder;
         } else {
-            return "Unrecognized snake style: " + draft.snakeStyle.name();
+            return Responses.publicMsg("Unrecognized snake style: " + draft.snakeStyle.name());
         }
         StringBuilder message = new StringBuilder();
+        List<String> cardsPreloadedInThisPick = new ArrayList<>(cardParamsUpper);
         int firstChangedRow = -1;
         int firstChangedSeat = -1;
         // first, try to find where this pick itself goes
@@ -163,8 +216,21 @@ public class PickCommand extends ListenerAdapter {
             if(StringUtils.isBlank(sheetPick)) {
                 // we found the first open cell in the sheet
                 if (pickingPlayer.seat != seat) {
-                    return username + ", it's not your turn. Seat " + seat + " at row " + (row+1) + " needs to go";
+                    // all they're doing is preloading. we should process nothing now except changing their preloads.
+                    draftJson.preloads.put(usertag, cardsPreloadedInThisPick);
+                    String preloadMessage = getPreloadMessage(cardsPreloadedInThisPick);
+                    try {
+                        Rotobot.draftJsonDAO.setPlayerPreload(draft.sheetId, usertag, cardParamsUpper);
+                    } catch (Exception e) {
+                        String msg = "Unexpected error while trying to process preload of " + usertag;
+                        logger.error(msg, e);
+                        return Responses.publicMsg(msg);
+                    }
+                    return Responses.privateMsg(preloadMessage);
                 }
+                // they picked a card, so the first card is not a preload
+                cardsPreloadedInThisPick.remove(0);
+                draftJson.preloads.put(usertag, cardsPreloadedInThisPick);
                 firstChangedRow = row;
                 firstChangedSeat = seat;
                 draft.pickedCards.add(cardLower);
@@ -197,9 +263,6 @@ public class PickCommand extends ListenerAdapter {
         }
         cardsToSend.add(firstSendRow);
         firstSendRow.set(firstChangedSeat-1, card);
-
-        // current user has just picked, so if they somehow had any preloads, which they shouldn't have been able to, clear them
-        draftJson.preloads.put(usertag, Collections.emptyList());
 
         @Nullable String playerIdToPing = null;
         if (laterCellsArePopulated) {
@@ -271,7 +334,11 @@ public class PickCommand extends ListenerAdapter {
                     currentRow.set(seat-1, preloadCard);
                     ++preloadsProcessed;
                     String preloaderTagDisplay = stripHashSuffix(preloaderTag);
-                    message.append("\n" + preloaderTagDisplay + " preloaded [" + preloadCard + "](" + scryfallUrl(preloadCard) + ")");
+                    String verb = "preloaded";
+                    if (preloaderTag.equals(usertag)) {
+                        verb = "picks";
+                    }
+                    message.append("\n" + preloaderTagDisplay + " " + verb + " [" + preloadCard + "](" + scryfallUrl(preloadCard) + ")");
                 }
             }
         }
@@ -282,7 +349,7 @@ public class PickCommand extends ListenerAdapter {
                 String cellCoord = cellCoord(firstChangedSeat, firstChangedRow);
                 int updatedCells = GSheets.writePick(draft.sheetId, cellCoord, card);
                 if (updatedCells != 1) {
-                    return "The google sheets api said " + updatedCells + " cells were updated. It should be 1. There's a problem";
+                    return Responses.publicMsg("The google sheets api said " + updatedCells + " cells were updated. It should be 1. There's a problem");
                 }
             } else {
 
@@ -294,13 +361,13 @@ public class PickCommand extends ListenerAdapter {
                 int updatedCells = GSheets.writePickRows(draft.sheetId, cellsRange, cardsToSend);
                 int expectedUpdate = preloadsProcessed + 1;
                 if (updatedCells != expectedUpdate) {
-                    return "The google sheets api said " + updatedCells + " cells were updated. It should be " + expectedUpdate + ". There's a problem";
+                    return Responses.publicMsg("The google sheets api said " + updatedCells + " cells were updated. It should be " + expectedUpdate + ". There's a problem");
                 }
             }
         } catch (Exception e) {
             String msg = "unexpected error while trying to write a pick to the sheet";
             logger.error(msg, e);
-            return msg;
+            return Responses.publicMsg(msg);
         }
 
         String maybeError = "";
@@ -322,7 +389,27 @@ public class PickCommand extends ListenerAdapter {
             suffix += "(test: you are <@" + pickingPlayer.discordId + ">)";
         }
 
-        return message + suffix + " (" + sheetLink + ")" + maybeError;
+        String ephemeralMessage = "Done";
+        if (!cardsPreloadedInThisPick.isEmpty()) {
+            ephemeralMessage = getPreloadMessage(cardsPreloadedInThisPick);
+        }
+
+        return Responses.msg(ephemeralMessage,message + suffix + " (" + sheetLink + ")" + maybeError);
+    }
+
+    @NotNull
+    private static String getPreloadMessage(List<String> preloadedCards) {
+        StringBuilder preloadMessage = new StringBuilder();
+        if (preloadedCards.size() == 1) {
+            String card = preloadedCards.get(0);
+            preloadMessage.append("New preload: [" + card + "](" + scryfallUrl(card) + ")");
+        } else {
+            preloadMessage.append("New preloads:");
+            for (String card_i : preloadedCards) {
+                preloadMessage.append("\n* [" + card_i + "](" + scryfallUrl(card_i) + ")");
+            }
+        }
+        return preloadMessage.toString();
     }
 
     @NotNull
@@ -346,7 +433,7 @@ public class PickCommand extends ListenerAdapter {
     }
 
     public void onCommandAutoCompleteInteraction(CommandAutoCompleteInteractionEvent event) {
-        if (event.getName().equals(CMD) && event.getFocusedOption().getName().equals("card")) {
+        if (event.getName().equals(CMD) && event.getFocusedOption().getName().startsWith("card")) {
             autocompleteCard(event);
         }
     }
