@@ -406,9 +406,9 @@ public class PickCommand extends ListenerAdapter {
         StringBuilder preloadMessage = new StringBuilder();
         if (preloadedCards.size() == 1) {
             String card = preloadedCards.get(0);
-            preloadMessage.append("New preload: [" + card + "](" + scryfallUrl(card) + ")");
+            preloadMessage.append("Your preload is now: [" + card + "](" + scryfallUrl(card) + ")");
         } else {
-            preloadMessage.append("New preloads:");
+            preloadMessage.append("Your preloads are now:");
             for (String card_i : preloadedCards) {
                 preloadMessage.append("\n* [" + card_i + "](" + scryfallUrl(card_i) + ")");
             }
