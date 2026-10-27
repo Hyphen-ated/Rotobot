@@ -136,6 +136,7 @@ public class Rotobot {
 
         ConcurrentHashMap<String, String> newCapsMap = new ConcurrentHashMap<>();
         List<Card> output = new ArrayList<>(30000);
+        HashSet<String> fullNames = new HashSet<>(30000);
         try (BufferedReader fileReader = Files.newBufferedReader(Path.of(Config.SCRYFALL_DEFAULT_CARDS_PATH), StandardCharsets.UTF_8)) {
             String line;
             while ((line = fileReader.readLine()) != null) {
@@ -151,9 +152,15 @@ public class Rotobot {
                 String cardName = cardJson.get("name").getAsString();
                 cardName = Junidecode.unidecode(cardName);
 
+                String setCode = cardJson.get("set").getAsString();
+
                 String layout = cardJson.get("layout").getAsString();
                 if (layoutsToIgnoreBack.contains(layout)) {
                     cardName = extractFirstCardName(cardName);
+                }
+
+                if (fullNames.contains(cardName)) {
+                    continue;
                 }
 
                 if ("token".equals(layout)) {
@@ -172,9 +179,21 @@ public class Rotobot {
 
                 String lowerName = Rotobot.simplifyName(cardName);
                 if (newCapsMap.containsKey(lowerName)) {
-                    continue;
+                    String existingName = newCapsMap.get(lowerName);
+                    //logger.warn("simplified names are the same for two different names: " + existingName + " --- " + cardName);
+                    // this happens for shit like "Rampant, Growth" vs "Rampant Growth"
+                    // annoying for us because of the punctuation-stripped version I use for autocomplete
+
+                    // so far, the goofy garbage version always has the extra punctuation in it
+                    // so my hack for now is to keep the shorter one in the autocomplete
+                    if (cardName.length() < existingName.length()) {
+                        newCapsMap.put(lowerName, cardName);
+                    }
+                } else {
+                    // normal case, first time seeing this kind of name
+                    newCapsMap.put(lowerName, cardName);
                 }
-                newCapsMap.put(lowerName, cardName);
+                fullNames.add(cardName);
 
                 boolean legal = true;
                 if (format != null) {
@@ -229,7 +248,7 @@ public class Rotobot {
                         throw new RuntimeException("problem determining color for card: " + cardName, e);
                     }
 
-                    String setCode = cardJson.get("set").getAsString();
+
                     JsonElement imageUris = cardJson.get("image_uris");
                     String imageUrl = "";
                     if (imageUris == null) {
