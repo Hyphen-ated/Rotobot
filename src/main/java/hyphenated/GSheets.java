@@ -19,11 +19,14 @@ import com.google.api.services.sheets.v4.Sheets;
 import com.google.api.services.sheets.v4.SheetsScopes;
 import com.google.api.services.sheets.v4.model.*;
 import org.apache.commons.lang3.StringUtils;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -33,6 +36,7 @@ public class GSheets {
     private static final String APPLICATION_NAME = "Rotobot";
     private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
     private static final String TOKENS_DIRECTORY_PATH = "tokens";
+    private static final String MATCHES_TAB_TITLE = "matches";
 
     /**
      * Global instance of the scopes required by this quickstart.
@@ -79,15 +83,61 @@ public class GSheets {
             }
         };
     }
+    public static synchronized Matches readMatchesFromSheet(String sheetId) throws Exception {
+        Draft draft = getDraft(sheetId);
+        Sheets service = getSheetsService();
+        final String matchRange = "matches!C3:L10";
+        ValueRange matchResponse = service.spreadsheets().values()
+                .get(sheetId, matchRange)
+                .execute();
+        List<List<Object>> matchValues = matchResponse.getValues();
+        Matches out = new Matches();
+        out.players = new ArrayList<>(8);
+        for(int i = 0; i < 8; ++i) {
+            Matches.Player player = new Matches.Player();
+            int wins = 0;
+            int losses = 0;
+            List<Object> row = matchValues.get(i);
+            for(int j = 0; j < 8; ++j) {
+                if (j == i) {
+                    continue;
+                }
+                Object obj = row.get(j);
+                if (! (obj instanceof String)) {
+                    throw new Exception("non-string found in google sheet");
+                }
+                Object str = (String)obj;
+                if ("0".equals(str) || "1".equals(str)) {
+                    player.lost[j] = true;
+                    ++losses;
+                } else if ("2".equals(str)) {
+                    player.won[j] = true;
+                    ++wins;
+                } else if ("".equals(str)) {
+                    //haven't played yet, do nothing
+                } else {
+                    throw new Exception("Unexpected match result value, not empty, 0, 1, or 2");
+                }
+            }
+            player.record = losses + "-" + wins;
+            player.discordId = draft.players.getValue(i).discordId;
+            out.players.add(player);
+        }
+        return out;
+    }
+
+    @Nullable
+    private static Draft getDraft(String sheetId) {
+        for (Draft dr : Rotobot.drafts.values()) {
+            if (dr.sheetId.equals(sheetId)) {
+                return dr;
+            }
+        }
+        return null;
+    }
 
     public static synchronized Draft readFromSheet(String sheetId) throws Exception {
-        final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
-        Credential credential = getCredentials(HTTP_TRANSPORT);
-        HttpRequestInitializer requestInitializer = setHttpTimeout(credential);
-        Sheets service =
-                new Sheets.Builder(HTTP_TRANSPORT, JSON_FACTORY, requestInitializer)
-                        .setApplicationName(APPLICATION_NAME)
-                        .build();
+        Sheets service = getSheetsService();
 
         // player tags, player ids, channel id, snake style are all adjacent, get them together
         final String playerRange = "engine!P2:Y3";
@@ -169,12 +219,20 @@ public class GSheets {
         return new Draft(sheetId, channelId, playerTags, playerIds, snakeStyle, legalCards, picks);
     }
 
-    public static synchronized int writePick(String sheetId, String cellCoord, String card) throws Exception {
+    @NotNull
+    private static Sheets getSheetsService() throws GeneralSecurityException, IOException {
         final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
+        Credential credential = getCredentials(HTTP_TRANSPORT);
+        HttpRequestInitializer requestInitializer = setHttpTimeout(credential);
         Sheets service =
-                new Sheets.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
+                new Sheets.Builder(HTTP_TRANSPORT, JSON_FACTORY, requestInitializer)
                         .setApplicationName(APPLICATION_NAME)
                         .build();
+        return service;
+    }
+
+    public static synchronized int writePick(String sheetId, String cellCoord, String card) throws Exception {
+        Sheets service = getSheetsService();
 
         ValueRange requestBody = new ValueRange();
         List<Object> innerList = new ArrayList<>();
@@ -192,11 +250,7 @@ public class GSheets {
 
     // cards is a list of rows where each row is 8 entries. each entry is a card name or blank string
     public static synchronized int writePickRows(String sheetId, String range, List<List<Object>> cards) throws Exception {
-        final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
-        Sheets service =
-                new Sheets.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
-                        .setApplicationName(APPLICATION_NAME)
-                        .build();
+        Sheets service = getSheetsService();
 
         ValueRange requestBody = new ValueRange();
         requestBody.setValues(cards);
@@ -208,7 +262,7 @@ public class GSheets {
     }
 
 
-    public static synchronized String createSheetCopy(String templateId,
+    public static synchronized DraftCreateResponse createSheetCopy(String templateId,
                                                       String draftName,
                                                       String channelId,
                                                       SnakeStyle snakeStyle,
@@ -241,10 +295,7 @@ public class GSheets {
         }
         String destinationSpreadsheetId = resp.getId();
 
-        Sheets service =
-                new Sheets.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
-                        .setApplicationName(APPLICATION_NAME)
-                        .build();
+        Sheets service = getSheetsService();
 
         ValueRange engineRequestBody = new ValueRange();
         List<Object> tagList = new ArrayList<>(playerTags);
@@ -316,7 +367,24 @@ public class GSheets {
         permission.setRole("writer");
         Permission permissionResponse =
                 driveService.permissions().create(destinationSpreadsheetId, permission).execute();
+ ///////////////////////////////////
 
-        return destinationSpreadsheetId;
+        Spreadsheet spreadsheet = service.spreadsheets()
+                .get(destinationSpreadsheetId)
+                .setFields("sheets.properties(sheetId,title)")
+                .execute();
+
+        String matchesTabGid = null;
+        for (Sheet sheet : spreadsheet.getSheets()) {
+            SheetProperties properties = sheet.getProperties();
+
+            if (properties.getTitle().equals(MATCHES_TAB_TITLE)) {
+                matchesTabGid = properties.getSheetId().toString();
+                break;
+            }
+        }
+
+        DraftCreateResponse draftCreateResponse = new DraftCreateResponse(destinationSpreadsheetId, matchesTabGid);
+        return draftCreateResponse;
     }
 }

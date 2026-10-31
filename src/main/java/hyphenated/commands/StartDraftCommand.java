@@ -152,7 +152,7 @@ public class StartDraftCommand extends ListenerAdapter {
 
             runningMsg += "\nCreating google sheet...";
             event.getHook().editOriginal(runningMsg).queue();
-            String newSheetId = GSheets.createSheetCopy(TEMPLATE_SHEET_ID,
+            DraftCreateResponse dcr = GSheets.createSheetCopy(TEMPLATE_SHEET_ID,
                     draftNameDate,
                     channelId,
                     snakeStyle,
@@ -160,9 +160,13 @@ public class StartDraftCommand extends ListenerAdapter {
                     playerIds,
                     legalCards);
 
+            String newSheetId = dcr.sheetId;
+
             DraftJson draftJson = new DraftJson();
             draftJson.sheetId = newSheetId;
+            draftJson.matchesTabGid = dcr.matchesTabGid;
             draftJson.name = draftName;
+
             draftJson.preloads = new HashMap<>();
             Rotobot.draftJsonDAO.setDraft(draftJson);
 

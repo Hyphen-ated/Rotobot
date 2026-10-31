@@ -18,6 +18,7 @@ import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.interactions.commands.build.SubcommandData;
 import net.dv8tion.jda.api.requests.GatewayIntent;
+import net.dv8tion.jda.api.utils.cache.CacheFlag;
 import net.gcardone.junidecode.Junidecode;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
@@ -49,14 +50,19 @@ public class Rotobot {
 
         JDA api = JDABuilder.createDefault(Config.DISCORD_BOT_TOKEN, GatewayIntent.GUILD_MESSAGES, GatewayIntent.MESSAGE_CONTENT)
                 .addEventListeners(
-                        new StartDraftCommand(),
                         new EndDraftCommand(),
+                        new MatchCommand(),
+                        new MoxfieldListener(),
                         new PickCommand(),
-                        new PreloadsCommand(),
                         new PreloadCommand(),
-                        new UpdateScryfallCommand(),
+                        new PreloadsCommand(),
                         new QueueCommands(),
-                        new MoxfieldListener())
+                        new SlashCommandLogger(),
+                        new StartDraftCommand(),
+                        new UpdateScryfallCommand()
+                )
+                // silence some warnings we don't care about for caching features we don't care about
+                .disableCache(CacheFlag.VOICE_STATE, CacheFlag.EMOJI, CacheFlag.STICKER, CacheFlag.SCHEDULED_EVENTS)
                 .build();
 
         api.updateCommands().addCommands(
@@ -86,7 +92,7 @@ public class Rotobot {
                 Commands.slash(PreloadCommand.CMD, "Stub for old command. Use /pick now to do preloads")
                                 .addOption(OptionType.STRING, "stub", "just so you don't accidentally reveal your plans"),
 
-                Commands.slash(PreloadsCommand.CMD, "Preload one or more cards, replacing any existing preloads")
+                Commands.slash(PreloadsCommand.CMD, "Preloads category")
                         .addSubcommands(
                             new SubcommandData(PreloadsCommand.LIST_SUBCOMMAND, "List your current preloads"),
                             new SubcommandData(PreloadsCommand.CLEAR_SUBCOMMAND, "Clear your preload")),
@@ -103,7 +109,15 @@ public class Rotobot {
                         .addOption(OptionType.USER, "user", "user to be removed from the queue", true)
                         .setDefaultPermissions(DefaultMemberPermissions.DISABLED),
                 Commands.slash(QueueCommands.QUEUE_CLEAR_CMD, "Clear the queue in the current channel")
-                        .setDefaultPermissions(DefaultMemberPermissions.DISABLED)
+                        .setDefaultPermissions(DefaultMemberPermissions.DISABLED),
+
+                Commands.slash(MatchCommand.CMD, "Interact with the matches tab in the sheet")
+                        .addSubcommands(
+                                new SubcommandData(MatchCommand.LINK_SUBCOMMAND, "Get link to the matches tab of the draft sheet"),
+                                new SubcommandData(MatchCommand.PING_SUBCOMMAND, "Ping the players you still need to play"),
+                                new SubcommandData(MatchCommand.RECORD_SUBCOMMAND, "Report your record"),
+                                new SubcommandData(MatchCommand.STANDINGS_SUBCOMMAND, "Report the record of every player in the draft")
+                        )
         ).queue();
 
     }
@@ -132,7 +146,7 @@ public class Rotobot {
             return new ArrayList<>();
         }
 
-        logger.info("Processing scryfall jsonl...");
+        logger.info("Processing scryfall jsonl");
 
         ConcurrentHashMap<String, String> newCapsMap = new ConcurrentHashMap<>();
         List<Card> output = new ArrayList<>(30000);
@@ -319,6 +333,7 @@ public class Rotobot {
     }
 
     private static void readAllDraftSheets() throws Exception{
+        logger.info("Reading all draft sheets");
         for(DraftJson draftJson : draftJsonDAO.getDraftJsons()) {
             Draft draft = GSheets.readFromSheet(draftJson.sheetId);
             drafts.put(draft.channelId, draft);
