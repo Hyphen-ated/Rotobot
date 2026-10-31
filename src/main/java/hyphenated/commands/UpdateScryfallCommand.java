@@ -37,29 +37,8 @@ public class UpdateScryfallCommand extends ListenerAdapter {
 
             event.deferReply().queue();
             try {
-                long startTime = System.currentTimeMillis();
-
-                URL scryfallEndpoint = new URL("https://api.scryfall.com/bulk-data");
-                JsonObject detailsJson = JsonParser.parseString(IOUtils.toString(scryfallEndpoint, StandardCharsets.UTF_8)).getAsJsonObject();
-                URL fullDataUrl = getDownloadURL(detailsJson);
-                if (fullDataUrl == null) {
-                    event.getHook().sendMessage("Couldn't parse the bulk-data endpoint response").queue();
-                    return;
-                }
-                // download gzipped card data from scryfall
-                FileUtils.copyURLToFile(fullDataUrl, new File(Config.SCRYFALL_DEFAULT_CARDS_GZ_PATH), 5000, 5000);
-
-                try (OutputStream outputStream = Files.newOutputStream(Path.of(Config.SCRYFALL_DEFAULT_CARDS_PATH))) {
-                    // read the gz file we just downloaded and extract it
-                    InputStream inputStream = new GZIPInputStream(Files.newInputStream(Path.of(Config.SCRYFALL_DEFAULT_CARDS_GZ_PATH)));
-                    IOUtils.copy(inputStream, outputStream);
-                }
-                Rotobot.getLegalCardsAndUpdateCapsMap(null);
-                long elapsedSecs = (System.currentTimeMillis() - startTime)/1000;
-                String msg = String.format("Done updating scryfall data in %d seconds", elapsedSecs);
+                String msg = handleAndMakeReply();
                 event.getHook().sendMessage(msg).queue();
-
-
             } catch (Exception e) {
                 event.getHook().sendMessage("Exception while updating scryfall cards").queue();
                 logger.error("Exception while updating scryfall cards", e);
@@ -67,7 +46,29 @@ public class UpdateScryfallCommand extends ListenerAdapter {
         }
     }
 
-    private URL getDownloadURL(JsonObject detailsJson) throws MalformedURLException {
+    public static String handleAndMakeReply() throws Exception {
+        long startTime = System.currentTimeMillis();
+
+        URL scryfallEndpoint = new URL("https://api.scryfall.com/bulk-data");
+        JsonObject detailsJson = JsonParser.parseString(IOUtils.toString(scryfallEndpoint, StandardCharsets.UTF_8)).getAsJsonObject();
+        URL fullDataUrl = getDownloadURL(detailsJson);
+        if (fullDataUrl == null) {
+            throw new Exception("Couldn't parse the bulk-data endpoint response");
+        }
+        // download gzipped card data from scryfall
+        FileUtils.copyURLToFile(fullDataUrl, new File(Config.SCRYFALL_DEFAULT_CARDS_GZ_PATH), 5000, 5000);
+
+        try (OutputStream outputStream = Files.newOutputStream(Path.of(Config.SCRYFALL_DEFAULT_CARDS_PATH))) {
+            // read the gz file we just downloaded and extract it
+            InputStream inputStream = new GZIPInputStream(Files.newInputStream(Path.of(Config.SCRYFALL_DEFAULT_CARDS_GZ_PATH)));
+            IOUtils.copy(inputStream, outputStream);
+        }
+        Rotobot.getLegalCardsAndUpdateCapsMap(null);
+        long elapsedSecs = (System.currentTimeMillis() - startTime)/1000;
+        return String.format("Done updating scryfall data in %d seconds", elapsedSecs);
+    }
+
+    private static URL getDownloadURL(JsonObject detailsJson) throws MalformedURLException {
         JsonArray data = detailsJson.getAsJsonArray("data");
         for(int i = 0; i < data.size(); ++i) {
             JsonObject obj = data.get(i).getAsJsonObject();

@@ -16,12 +16,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.awt.*;
+import java.io.File;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
-
 
 public class StartDraftCommand extends ListenerAdapter {
     private static final Logger logger = LoggerFactory.getLogger(StartDraftCommand.class);
@@ -55,6 +55,10 @@ public class StartDraftCommand extends ListenerAdapter {
 
     public String handle(SlashCommandInteractionEvent event) {
         try {
+
+            String runningMsg = updateScryfallIfNeeded(event);
+            runningMsg += "\nProcessing new draft...";
+            event.getHook().editOriginal(runningMsg).queue();
             Guild guild = event.getGuild();
 
             String format = "vintage";
@@ -146,6 +150,8 @@ public class StartDraftCommand extends ListenerAdapter {
             String channelId = channel.getId();
             List<Card> legalCards = Rotobot.getLegalCardsAndUpdateCapsMap(format);
 
+            runningMsg += "\nCreating google sheet...";
+            event.getHook().editOriginal(runningMsg).queue();
             String newSheetId = GSheets.createSheetCopy(TEMPLATE_SHEET_ID,
                     draftNameDate,
                     channelId,
@@ -193,17 +199,28 @@ public class StartDraftCommand extends ListenerAdapter {
 
             Rotobot.queueJsonDAO.clearChannel(event.getChannel().getId());
 
-            String reply = "Draft created in <#" +channelId + ">";
-            MessageCreateData mcd = new MessageCreateBuilder()
-                    .setContent(reply)
-                    .build();
-            event.getHook().sendMessage(mcd).queue();
+            runningMsg += "\nDraft created in <#" +channelId + ">";
+            event.getHook().editOriginal(runningMsg).queue();
             return null;
 
         } catch (Exception e) {
             logger.error("Exception while making a new draft", e);
             return "Exception while making a new draft";
         }
+    }
+
+    private String updateScryfallIfNeeded(SlashCommandInteractionEvent event) throws Exception {
+        File scry = new File(Config.SCRYFALL_DEFAULT_CARDS_GZ_PATH);
+        long modifyTime = scry.lastModified(); // returns zero if not exists, which is fine
+        long currentTime = System.currentTimeMillis();
+        long millisInADay = 1000 * 60 * 60 * 24;
+        if (currentTime - modifyTime > millisInADay) {
+            String msg = "Updating scryfall data...";
+            event.getHook().editOriginal(msg).queue();
+            UpdateScryfallCommand.handleAndMakeReply();
+            return msg;
+        }
+        return "Scryfall data is up to date";
     }
 
     private static Color generateRandomColor() {
