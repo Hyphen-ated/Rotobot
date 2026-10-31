@@ -119,7 +119,7 @@ public class GSheets {
                     throw new Exception("Unexpected match result value, not empty, 0, 1, or 2");
                 }
             }
-            player.record = losses + "-" + wins;
+            player.record = wins + "-" + losses;
             player.discordId = draft.players.getValue(i).discordId;
             out.players.add(player);
         }

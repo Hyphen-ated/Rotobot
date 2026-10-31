@@ -114,7 +114,7 @@ public class MatchCommand extends ListenerAdapter {
                     toPlay.add("<nobody>");
                 }
 
-                return "\nWon vs: " + String.join(", ", wonVs) + "\n" +
+                return "\nYour record: " + player.record + "\nWon vs: " + String.join(", ", wonVs) + "\n" +
                         "Lost vs: " + String.join(", ", lostVs) + "\n" +
                         "To play: " + String.join(", ", toPlay);
             }
