@@ -192,6 +192,12 @@ public class MatchCommand extends ListenerAdapter {
 
                 int myIndex = draft.getPlayerIdxById(playerDiscordId);
                 int oppIndex = draft.getPlayerIdxById(opponent.getId());
+                if (myIndex == -1) {
+                    return "you need to be a player in this draft";
+                }
+                if (oppIndex == -1) {
+                    return "opponent needs to be a player in this draft";
+                }
                 GSheets.writeMatchResult(draft.sheetId, myIndex, yourWins, oppIndex, theirWins);
                 return "[Match recorded](" + matchesTabUrl + "): <@" + playerDiscordId + "> went " + yourWins + "-" + theirWins + " vs <@" + opponent.getId() + ">";
             }
