@@ -85,6 +85,9 @@ public class GSheets {
     }
     public static synchronized Matches readMatchesFromSheet(String sheetId) throws Exception {
         Draft draft = getDraft(sheetId);
+        if (draft == null) {
+            throw new Exception("no draft with this sheetid");
+        }
         Sheets service = getSheetsService();
         final String matchRange = "matches!C3:L10";
         ValueRange matchResponse = service.spreadsheets().values()
@@ -410,6 +413,42 @@ public class GSheets {
         } catch (Exception e) {
             logger.warn("Trying to find matches tab gid and failed", e);
             return null;
+        }
+    }
+
+    public static void writeMatchResult(String sheetId, int playerIdx1, int wins1, int playerIdx2, int wins2) throws Exception {
+        Sheets service = getSheetsService();
+        List<ValueRange> data = new ArrayList<>();
+
+
+        char p1Column = (char)('C' + playerIdx1);
+        char p2Column = (char)('C' + playerIdx2);
+        String range1 = String.format("%s!%s%s",MATCHES_TAB_TITLE, p2Column, 3 + playerIdx1);
+        String range2 = String.format("%s!%s%s",MATCHES_TAB_TITLE, p1Column, 3 + playerIdx2);
+        ValueRange cell1 = new ValueRange()
+                .setRange(range1)
+                .setValues(Collections.singletonList(
+                        Collections.singletonList(wins1)));
+        data.add(cell1);
+
+        ValueRange cell2 = new ValueRange()
+                .setRange(range2)
+                .setValues(Collections.singletonList(
+                        Collections.singletonList(wins2)));
+        data.add(cell2);
+
+        BatchUpdateValuesRequest body = new BatchUpdateValuesRequest()
+                .setValueInputOption("RAW")
+                .setData(data);
+
+        BatchUpdateValuesResponse response =
+                service.spreadsheets()
+                        .values()
+                        .batchUpdate(sheetId, body)
+                        .execute();
+
+        if (response.getTotalUpdatedCells() != 2) {
+            throw new Exception("Should have updated 2 cells and instead it was: " + response.getTotalUpdatedCells());
         }
     }
 }

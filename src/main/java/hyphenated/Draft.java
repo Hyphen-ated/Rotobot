@@ -61,4 +61,15 @@ public class Draft {
             this.legalCardsTrie.put(simpleCard, Rotobot.cardsLowerToCaps.get(simpleCard));
         }
     }
+
+    public int getPlayerIdxById(String id) {
+        int i = 0;
+        for (Player p : players.values()) {
+            if (p.discordId.equals(id)) {
+                return i;
+            }
+            ++i;
+        }
+        return -1;
+    }
 }

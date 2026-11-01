@@ -6,8 +6,10 @@ import hyphenated.Matches;
 import hyphenated.Rotobot;
 import hyphenated.json.DraftJson;
 import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
 import net.dv8tion.jda.api.utils.messages.MessageCreateData;
 import org.apache.commons.lang3.StringUtils;
@@ -26,7 +28,12 @@ public class MatchCommand extends ListenerAdapter {
     public static final String LINK_SUBCOMMAND = "link";
     public static final String PING_SUBCOMMAND = "ping";
     public static final String RECORD_SUBCOMMAND = "record";
+    public static final String REPORT_SUBCOMMAND = "report";
     public static final String STANDINGS_SUBCOMMAND = "standings";
+
+    public static final String REPORT_OPTION_OPPONENT = "opponent";
+    public static final String REPORT_OPTION_YOUR_WINS = "your-wins";
+    public static final String REPORT_OPTION_THEIR_WINS = "their-wins";
 
     public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
         if (event.getName().equals(CMD)) {
@@ -125,6 +132,9 @@ public class MatchCommand extends ListenerAdapter {
                 List<String> toPlay = new ArrayList<>();
 
                 Matches.Player player = getCurrentPlayerFromMatches(matches, playerDiscordId);
+                if (player == null) {
+                    return "You're not in this draft";
+                }
                 for (int i = 0; i < 8; ++i) {
                     String targetDiscordId = matches.players.get(i).discordId;
                     String idTag = "<@" + targetDiscordId + ">";
@@ -149,17 +159,47 @@ public class MatchCommand extends ListenerAdapter {
                 return "\n[Your record](" + matchesTabUrl + "): " + player.record + "\nWon vs: " + String.join(", ", wonVs) + "\n" +
                         "Lost vs: " + String.join(", ", lostVs) + "\n" +
                         "To play: " + String.join(", ", toPlay);
+            } else if (REPORT_SUBCOMMAND.equals(subcommand)) {
+                Matches matches = GSheets.readMatchesFromSheet(draft.sheetId);
+                Matches.Player player = getCurrentPlayerFromMatches(matches, playerDiscordId);
+                if (player == null) {
+                    return "You're not in this draft";
+                }
+
+                OptionMapping opponentOM = event.getOption(REPORT_OPTION_OPPONENT);
+                OptionMapping yourWinsOM = event.getOption(REPORT_OPTION_YOUR_WINS);
+                OptionMapping theirWinsOM = event.getOption(REPORT_OPTION_THEIR_WINS);
+                User opponent = opponentOM.getAsUser();
+
+                if (opponent.getId().equals(playerDiscordId)) {
+                    return "you can't report a match against yourself";
+                }
+
+                int yourWins = yourWinsOM.getAsInt();
+                int theirWins = theirWinsOM.getAsInt();
+                if (yourWins < 0 || yourWins > 2) {
+                    return "your wins must be 0, 1, or 2";
+                }
+                if (theirWins < 0 || theirWins > 2) {
+                    return "their wins must be 0, 1, or 2";
+                }
+                if (yourWins != 2 && theirWins != 2) {
+                    return "either your wins or their wins must be 2";
+                }
+                if (yourWins == 2 && theirWins == 2) {
+                    return "your wins and their wins can't both be 2";
+                }
+
+                int myIndex = draft.getPlayerIdxById(playerDiscordId);
+                int oppIndex = draft.getPlayerIdxById(opponent.getId());
+                GSheets.writeMatchResult(draft.sheetId, myIndex, yourWins, oppIndex, theirWins);
+                return "[Match recorded](" + matchesTabUrl + "): <@" + playerDiscordId + "> went " + yourWins + "-" + theirWins + " vs <@" + opponent.getId() + ">";
             }
         } catch (Exception e) {
             String msg = "Error while processing command";
             logger.error(msg, e);
             return msg;
         }
-
-//        String usertag = event.getUser().getAsTag();
-//        if (!draft.players.containsKey(usertag)) {
-//            return "You're not in this draft";
-//        }
 
         logger.warn("Unhandled match subcommand: " + event.getSubcommandName());
         return "Unexpected error trying to handle this command";

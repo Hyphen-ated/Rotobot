@@ -116,7 +116,11 @@ public class Rotobot {
                                 new SubcommandData(MatchCommand.LINK_SUBCOMMAND, "Get link to the matches tab of the draft sheet"),
                                 new SubcommandData(MatchCommand.PING_SUBCOMMAND, "Ping the players you still need to play"),
                                 new SubcommandData(MatchCommand.RECORD_SUBCOMMAND, "Report your record"),
-                                new SubcommandData(MatchCommand.STANDINGS_SUBCOMMAND, "Report the record of every player in the draft")
+                                new SubcommandData(MatchCommand.STANDINGS_SUBCOMMAND, "Report the record of every player in the draft"),
+                                new SubcommandData(MatchCommand.REPORT_SUBCOMMAND, "Report your game wins/losses against an opponent")
+                                        .addOption(OptionType.USER, MatchCommand.REPORT_OPTION_OPPONENT, "Who you just played", true)
+                                        .addOption(OptionType.INTEGER, MatchCommand.REPORT_OPTION_YOUR_WINS, "Your game wins (0, 1, or 2)", true)
+                                        .addOption(OptionType.INTEGER, MatchCommand.REPORT_OPTION_THEIR_WINS, "Their game wins (0, 1, or 2)", true)
                         )
         ).queue();
 
