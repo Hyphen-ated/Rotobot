@@ -364,4 +364,12 @@ public class Rotobot {
         return roles.stream().anyMatch(role -> role.getId().equals(Config.ADMIN_ROLE_ID));
     }
 
+    @NotNull
+    public static String stripHashSuffix(String userTag) {
+        if (userTag.endsWith("#0000")) {
+            return userTag.substring(0, userTag.length() - 5);
+        }
+        return userTag;
+    }
+
 }

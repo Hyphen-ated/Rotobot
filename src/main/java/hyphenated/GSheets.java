@@ -387,4 +387,29 @@ public class GSheets {
         DraftCreateResponse draftCreateResponse = new DraftCreateResponse(destinationSpreadsheetId, matchesTabGid);
         return draftCreateResponse;
     }
+
+    @Nullable
+    public static String readMatchesTabGidFromSheet(String sheetId) {
+        try {
+            Sheets service = getSheetsService();
+            Spreadsheet spreadsheet = service.spreadsheets()
+                    .get(sheetId)
+                    .setFields("sheets.properties")
+                    .execute();
+
+            for (Sheet sheet : spreadsheet.getSheets()) {
+                SheetProperties properties = sheet.getProperties();
+
+                if (MATCHES_TAB_TITLE.equals(properties.getTitle())) {
+                    return properties.getSheetId().toString();
+                }
+            }
+            logger.warn("No matches tab found trying to get gid");
+            return null;
+
+        } catch (Exception e) {
+            logger.warn("Trying to find matches tab gid and failed", e);
+            return null;
+        }
+    }
 }

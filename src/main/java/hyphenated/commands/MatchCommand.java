@@ -8,6 +8,8 @@ import hyphenated.json.DraftJson;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
+import net.dv8tion.jda.api.utils.messages.MessageCreateData;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -29,15 +31,51 @@ public class MatchCommand extends ListenerAdapter {
     public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
         if (event.getName().equals(CMD)) {
             if (event.getSubcommandName().equals(PING_SUBCOMMAND)) {
-                event.deferReply(false)
+                event.deferReply(true).queue();
+                String reply = handlePingAndMakeReply(event);
+                event.getHook().sendMessage("Okay, pinging them").queue();
+                // "/match ping" needs a second message in order to ping people
+                MessageCreateData mcd = new MessageCreateBuilder()
+                        .setContent(reply)
                         .setAllowedMentions(Collections.singleton(Message.MentionType.USER))
-                        .queue();
+                        .build();
+                event.getHook().sendMessage(mcd).queue();
             } else {
+                // but for the other commands we just edit the initial message
                 event.deferReply(false).queue();
+                String reply = handleAndMakeReply(event);
+                event.getHook().sendMessage(reply)
+                        .setSuppressEmbeds(true).queue();
             }
-            String reply = handleAndMakeReply(event);
-            event.getHook().sendMessage(reply)
-                    .setSuppressEmbeds(true).queue();
+        }
+    }
+
+    public synchronized String handlePingAndMakeReply(SlashCommandInteractionEvent event) {
+        try {
+            String channelId = event.getMessageChannel().getId();
+            String playerDiscordId = event.getUser().getId();
+            Draft draft = Rotobot.drafts.get(channelId);
+            if (draft == null) {
+                return "I don't know of a draft happening in this channel";
+            }
+            Matches matches = GSheets.readMatchesFromSheet(draft.sheetId);
+            int playerIdx = findPlayerIdx(draft, playerDiscordId);
+            Matches.Player matchPlayer = matches.players.get(playerIdx);
+            String playerTag = draft.players.get(playerIdx);
+            StringBuilder msg = new StringBuilder("Players left to play " + Rotobot.stripHashSuffix(playerTag) + ": ");
+            for (int i = 0; i < 8; ++i) {
+                if (i == playerIdx) {
+                    continue;
+                }
+                if (!matchPlayer.lost[i] && !matchPlayer.won[i]) {
+                    msg.append("<@").append(draft.players.getValue(i).discordId).append("> ");
+                }
+            }
+            return msg.toString();
+        } catch (Exception e) {
+            String msg = "Error while processing command";
+            logger.error(msg, e);
+            return msg;
         }
     }
 
@@ -58,30 +96,24 @@ public class MatchCommand extends ListenerAdapter {
             return msg;
         }
         if (StringUtils.isBlank(draftJson.matchesTabGid)) {
-            return "Bot doesn't have the match data for this draft (too old probably)";
+            draftJson.matchesTabGid = GSheets.readMatchesTabGidFromSheet(draftJson.sheetId);
         }
-        String matchesTabUrl = Rotobot.formatSheetUrl(draftJson.sheetId) + "?gid=" + draftJson.matchesTabGid;
+        String matchesTabUrl;
+        // failed to find it above
+        if (StringUtils.isBlank(draftJson.matchesTabGid)) {
+            // just link the main sheet, sorry deal with it
+            matchesTabUrl = Rotobot.formatSheetUrl(draftJson.sheetId);
+        } else {
+            matchesTabUrl = Rotobot.formatSheetUrl(draftJson.sheetId) + "?gid=" + draftJson.matchesTabGid;
+        }
+
         String subcommand = event.getSubcommandName();
         try {
             if (LINK_SUBCOMMAND.equalsIgnoreCase(subcommand)) {
                 return "[Match records](" + matchesTabUrl + ")";
-            } else if (PING_SUBCOMMAND.equalsIgnoreCase(subcommand)) {
-                Matches matches = GSheets.readMatchesFromSheet(draft.sheetId);
-                StringBuilder msg = new StringBuilder("Players left to play you: ");
-                int playerIdx = findPlayerIdx(draft, playerDiscordId);
-                Matches.Player matchPlayer = matches.players.get(playerIdx);
-                for (int i = 0; i < 8; ++i) {
-                    if (i == playerIdx) {
-                        continue;
-                    }
-                    if (!matchPlayer.lost[i] && !matchPlayer.won[i]) {
-                        msg.append("<@").append(draft.players.getValue(i).discordId).append("> ");
-                    }
-                }
-                return msg.toString();
             } else if (STANDINGS_SUBCOMMAND.equals(subcommand)) {
                 Matches matches = GSheets.readMatchesFromSheet(draft.sheetId);
-                StringBuilder msg = new StringBuilder("\n");
+                StringBuilder msg = new StringBuilder("[Match records](" + matchesTabUrl + "):\n");
                 for (Matches.Player player : matches.players) {
                     msg.append("<@").append(player.discordId).append(">: ").append(player.record).append("\n");
                 }
@@ -114,7 +146,7 @@ public class MatchCommand extends ListenerAdapter {
                     toPlay.add("<nobody>");
                 }
 
-                return "\nYour record: " + player.record + "\nWon vs: " + String.join(", ", wonVs) + "\n" +
+                return "\n[Your record](" + matchesTabUrl + "): " + player.record + "\nWon vs: " + String.join(", ", wonVs) + "\n" +
                         "Lost vs: " + String.join(", ", lostVs) + "\n" +
                         "To play: " + String.join(", ", toPlay);
             }

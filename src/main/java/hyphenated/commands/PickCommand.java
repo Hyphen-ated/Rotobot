@@ -325,7 +325,7 @@ public class PickCommand extends ListenerAdapter {
                             List<String> otherPlayerPicks = draft.picks.get(sniperSeat);
                             if (otherPlayerPicks.contains(preloadLower)) {
                                 String sniperTag = draft.players.get(sniperSeat);
-                                sniperName = stripHashSuffix(sniperTag);
+                                sniperName = Rotobot.stripHashSuffix(sniperTag);
                                 break;
                             }
                         }
@@ -337,7 +337,7 @@ public class PickCommand extends ListenerAdapter {
                     draft.picks.get(seat-1).add(preloadLower);
                     currentRow.set(seat-1, preloadCard);
                     ++preloadsProcessed;
-                    String preloaderTagDisplay = stripHashSuffix(preloaderTag);
+                    String preloaderTagDisplay = Rotobot.stripHashSuffix(preloaderTag);
                     String verb = "preloaded";
                     if (preloaderTag.equals(usertag)) {
                         verb = "picks";
@@ -414,14 +414,6 @@ public class PickCommand extends ListenerAdapter {
             }
         }
         return preloadMessage.toString();
-    }
-
-    @NotNull
-    private static String stripHashSuffix(String userTag) {
-        if (userTag.endsWith("#0000")) {
-            return userTag.substring(0, userTag.length() - 5);
-        }
-        return userTag;
     }
 
     private static String cellCoord(int seat, int row) {
