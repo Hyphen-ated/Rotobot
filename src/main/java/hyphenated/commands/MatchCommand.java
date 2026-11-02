@@ -69,7 +69,7 @@ public class MatchCommand extends ListenerAdapter {
             int playerIdx = findPlayerIdx(draft, playerDiscordId);
             Matches.Player matchPlayer = matches.players.get(playerIdx);
             String playerTag = draft.players.get(playerIdx);
-            StringBuilder msg = new StringBuilder("Players left to play " + Rotobot.stripHashSuffix(playerTag) + ": ");
+            StringBuilder msg = new StringBuilder("Players left to play <@" + playerDiscordId + ">: ");
             for (int i = 0; i < 8; ++i) {
                 if (i == playerIdx) {
                     continue;
