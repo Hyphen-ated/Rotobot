@@ -269,6 +269,7 @@ public class PickCommand extends ListenerAdapter {
         firstSendRow.set(firstChangedSeat-1, card);
 
         @Nullable String playerIdToPing = null;
+        boolean stillPickersTurn = false;
         if (laterCellsArePopulated) {
             message.append("\nThere are unexpected picks already placed AFTER this. Double-check the sheet.");
         } else {
@@ -298,8 +299,12 @@ public class PickCommand extends ListenerAdapter {
                     // BUT it's possible for a doublepicker to make a single preload.
                     // if they did that, then we DO want to ping them. so always ping someone if preloads happened
                     int prevSeat = pickOrder[i-1];
-                    if (prevSeat != seat || preloadsProcessed > 0) {
-                        playerIdToPing = preloaderId;
+                    if (prevSeat != seat) {
+                        if (preloadsProcessed > 0) {
+                            playerIdToPing = preloaderId; // the person who might have made the next preload, but didn't
+                        }
+                    } else {
+                        stillPickersTurn = true; // don't PING them, but comment about it
                     }
                     break;
                 } else {
@@ -388,9 +393,11 @@ public class PickCommand extends ListenerAdapter {
         String suffix = "";
         if(!StringUtils.isBlank(playerIdToPing)) {
             suffix = " (next up: <@" + playerIdToPing + ">)";
+        } else if (stillPickersTurn) {
+            suffix = " (still their turn)";
         }
         if (!Config.PROD) {
-            suffix += "(test: you are <@" + pickingPlayer.discordId + ">)";
+            suffix += " (test: you are <@" + pickingPlayer.discordId + ">)";
         }
 
         String ephemeralMessage = "Done";
