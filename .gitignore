@@ -8,3 +8,4 @@
 /tokens/*
 /active_drafts.json
 /queues.json
+/announce_update_webhook.sh

@@ -65,6 +65,9 @@ task deploy {
                 execute 'sudo systemctl restart rotobot'
             }
         }
+        exec {
+            commandLine 'sh', './announce_update_webhook.sh'
+        }
     }
 }
 
