@@ -299,10 +299,8 @@ public class PickCommand extends ListenerAdapter {
                     // BUT it's possible for a doublepicker to make a single preload.
                     // if they did that, then we DO want to ping them. so always ping someone if preloads happened
                     int prevSeat = pickOrder[i-1];
-                    if (prevSeat != seat) {
-                        if (preloadsProcessed > 0) {
-                            playerIdToPing = preloaderId; // the person who might have made the next preload, but didn't
-                        }
+                    if (prevSeat != seat || preloadsProcessed > 0) {
+                        playerIdToPing = preloaderId; // the person who might have made the next preload, but didn't
                     } else {
                         stillPickersTurn = true; // don't PING them, but comment about it
                     }
