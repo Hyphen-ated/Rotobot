@@ -22,6 +22,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class StartDraftCommand extends ListenerAdapter {
     private static final Logger logger = LoggerFactory.getLogger(StartDraftCommand.class);
@@ -52,6 +54,8 @@ public class StartDraftCommand extends ListenerAdapter {
 
         }
     }
+
+    Pattern dateInDraftNamePattern = Pattern.compile(".*\\d\\d\\d\\d-\\d\\d$");
 
     public String handle(SlashCommandInteractionEvent event) {
         try {
@@ -87,7 +91,15 @@ public class StartDraftCommand extends ListenerAdapter {
             }
 
             String draftName = event.getOption("name").getAsString();
-            String draftNameDate = draftName + "-" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM"));
+            Matcher m = dateInDraftNamePattern.matcher(draftName);
+            String draftNameDate;
+            if (m.matches()) {
+                runningMsg += "\nProvided name already looks like it ends with a year and month, so we're not adding it again...";
+                event.getHook().editOriginal(runningMsg).queue();
+                draftNameDate = draftName;
+            } else {
+                draftNameDate = draftName + "-" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM"));
+            }
             Role role = guild.createRole()
                     .setName(draftName)
                     .setMentionable(true)
