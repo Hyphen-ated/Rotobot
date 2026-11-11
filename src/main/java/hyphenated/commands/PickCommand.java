@@ -393,6 +393,8 @@ public class PickCommand extends ListenerAdapter {
             suffix = " (next up: <@" + playerIdToPing + ">)";
         } else if (stillPickersTurn) {
             suffix = " (still their turn)";
+        } else if (draft.pickedCards.size() == draftSize) {
+            suffix = "\nThe draft is done! \uD83C\uDF89"; // cheer emoji
         }
         if (!Config.PROD) {
             suffix += " (test: you are <@" + pickingPlayer.discordId + ">)";
