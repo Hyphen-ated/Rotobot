@@ -464,13 +464,12 @@ public class PickCommand extends ListenerAdapter {
             --endIdx;
             prefix = lowerValue.substring(0, endIdx);
             cards = draft.legalCardsTrie.prefixMap(prefix);
-        } while (cards.size() == 0);
+        } while (cards.isEmpty());
 
         String trimmedChars = lowerValue.substring(endIdx);
 
-        List<Command.Choice> options = new ArrayList<>(25);
-
-        if(trimmedChars.length() == 0) {
+        List<String> nameCandidates = new ArrayList<>(25);
+        if(trimmedChars.isEmpty()) {
             // we are in the "normal" case, the full query they gave is a prefix of some cards.
             int suggestionCount = 0;
             for (String name : cards.values()) {
@@ -478,12 +477,10 @@ public class PickCommand extends ListenerAdapter {
                     logger.warn("Name was unexpectedly blank. given value is \"" + value + "\"");
                     continue;
                 }
-                if (!draft.pickedCards.contains(Rotobot.simplifyName(name))) {
-                    options.add(new Command.Choice(name, name));
-                    ++suggestionCount;
-                    if (suggestionCount >= 25) {
-                        break;
-                    }
+                nameCandidates.add(name);
+                ++suggestionCount;
+                if (suggestionCount >= 25) {
+                    break;
                 }
             }
         } else {
@@ -496,9 +493,7 @@ public class PickCommand extends ListenerAdapter {
             PriorityQueue<Pair<Double, String>> queue = new PriorityQueue<> (capacity);
             for(String name : cards.values()) {
                 String lowerName = Rotobot.simplifyName(name);
-                if (draft.pickedCards.contains(lowerName)) {
-                    continue;
-                }
+
                 // e.g. if the search was "lilli veil"
                 // and we're looking at the card "liliana of the veil"
                 // we trimmed the query to "lil" and now we want to compare
@@ -516,7 +511,27 @@ public class PickCommand extends ListenerAdapter {
                 if (pair == null) {
                     break;
                 }
-                String name = pair.getValue();
+                nameCandidates.add(pair.getValue());
+            }
+        }
+
+        List<Command.Choice> options = new ArrayList<>(25);
+        List<String> unpickedCandidates = new ArrayList<>(25);
+        for (String name : nameCandidates) {
+            if (!draft.pickedCards.contains(Rotobot.simplifyName(name))) {
+                unpickedCandidates.add(name);
+            }
+        }
+        if (unpickedCandidates.isEmpty()) {
+            // they've all been picked, so draw them all with a fancy unicode X
+            // (if someone is struggling to pick a card and it's because the card was already picked and they don't know,
+            // this helps them know)
+            for (String name : nameCandidates) {
+                options.add(new Command.Choice("❌" + name, name));
+            }
+        } else {
+            // show only the unpicked ones
+            for (String name : unpickedCandidates) {
                 options.add(new Command.Choice(name, name));
             }
         }
