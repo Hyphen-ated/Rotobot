@@ -494,6 +494,9 @@ public class PickCommand extends ListenerAdapter {
             // some cards were prefixed with the first part of the query. rank them.
             PriorityQueue<Pair<Double, String>> queue = new PriorityQueue<> (capacity);
             for(String name : cards.values()) {
+                if (name == null) {
+                    continue;
+                }
                 String lowerName = Rotobot.simplifyName(name);
 
                 // e.g. if the search was "lilli veil"
